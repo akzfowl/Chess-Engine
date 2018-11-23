@@ -9,6 +9,21 @@ type Board = [[Square]]
 type BoardPosition = (Int, Int)
 type HumanReadablePosition = (Char, Int)
 
+displayBoard :: Board -> IO()
+displayBoard b = putStrLn (unlines (map (concatMap displaySquare) b))
+
+displaySquare :: Square -> String
+displaySquare Nothing = "  --   "
+displaySquare (Just p) = "  " ++ show p ++ "   "
+
+{-draw (Board _ y _ m) = unlines (concat (interleave rowPattern (map eachRow u)))
+  where
+    u = (convertListToListOfLists (Map.toList m))
+    rowPattern = [intersperse '+' (replicate y '-')]
+    eachRow r = combine (interleave bar (map showPlayer r))
+    combine = foldr1 (zipWith (++))
+    bar = replicate y "|"-}
+
 boardToHumanReadable :: BoardPosition -> HumanReadablePosition
 boardToHumanReadable (p1, p2) = case p1 of
     1 -> ('a',p2)
@@ -37,6 +52,7 @@ initialBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece Wh
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
                 [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                 [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
@@ -48,3 +64,172 @@ getTotalValueOfPlayers = foldl compute (0, 0) . concat
                          where compute pts Nothing = pts
                                compute (ptsB, ptsW) (Just (Piece c2 p)) | c2 == Black = (ptsB + (pointValue p), ptsW)
                                                                         | otherwise = (ptsB, ptsW + (pointValue p))
+
+positions :: [BoardPosition]
+positions = [1..8] >>= \p1 -> [1..8] >>= \p2 -> return (p1, p2)
+
+isPositionOnBoard :: BoardPosition -> Bool
+isPositionOnBoard (p1, p2) = (p1, p2) `elem` positions
+
+getColourOfPieceInPosition :: BoardPosition -> Board -> Maybe Colour
+getColourOfPieceInPosition p b | isPositionOnBoard p = b !! (fst position) !! (snd position) >>= \p -> return (pieceColour p)
+                               | otherwise = Nothing
+                               where position = (fst p-1, snd p-1)
+
+getPieceTypeInPosition :: BoardPosition -> Board -> Maybe PieceType
+getPieceTypeInPosition p b | isPositionOnBoard p = b !! (fst position) !! (snd position) >>= \p -> return (pieceType p)
+                           | otherwise = Nothing
+                           where position = (fst p-1, snd p-1)
+
+getPieceInPosition :: BoardPosition -> Board -> Maybe Piece
+getPieceInPosition p b | isPositionOnBoard p = b !! (fst position) !! (snd position) >>= \p -> return p
+                       | otherwise = Nothing
+                       where position = (fst p-1, snd p-1)
+
+isPositionEmpty :: BoardPosition -> Board -> Bool
+isPositionEmpty p b = case (getColourOfPieceInPosition p b) of
+                          Nothing -> True
+                          Just _  -> False
+
+isOccupiedByWhitePiece :: BoardPosition -> Board -> Bool
+isOccupiedByWhitePiece p b = getColourOfPieceInPosition p b == Just White
+
+isOccupiedByBlackPiece :: BoardPosition -> Board -> Bool
+isOccupiedByBlackPiece p b = getColourOfPieceInPosition p b == Just Black
+
+hasOppositePlayerPiece :: BoardPosition -> BoardPosition -> Board -> Bool
+hasOppositePlayerPiece p1 p2 b = if (isOccupiedByBlackPiece p1 b && isOccupiedByWhitePiece p2 b) || (isOccupiedByWhitePiece p1 b && isOccupiedByBlackPiece p2 b)
+                                 then True
+                                 else False
+
+correctionForMovementDirection :: BoardPosition -> Board -> Int
+correctionForMovementDirection p b | isOccupiedByWhitePiece p b = 1
+                                   | isOccupiedByBlackPiece p b = -1
+                                   | otherwise = 0
+
+moveForwardOnce :: BoardPosition -> Board -> [BoardPosition]
+moveForwardOnce (p1, p2) b = [(p1 + 1 * correctionForMovementDirection (p1, p2) b, p2)]
+
+moveForwardTwice :: BoardPosition -> Board -> [BoardPosition]
+moveForwardTwice (p1, p2) b  = undefined
+
+singleStraightMovements :: [BoardPosition]
+singleStraightMovements = [(1,0), (0,1), (0,-1), (-1,0)]
+
+singleDiagonalMovements :: [BoardPosition]
+singleDiagonalMovements = [(1,1), (-1,1), (1,-1), (-1,-1)]
+
+straightMovements :: [BoardPosition]
+straightMovements = singleStraightMovements >>= \n -> [1..8] >>= \p -> return (p * fst n, p * snd n)
+
+diagonalMovements :: [BoardPosition]
+diagonalMovements = singleDiagonalMovements >>= \n -> [1..8] >>= \p -> return (p * fst n, p * snd n)
+
+isPathClearBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Bool
+isPathClearBetweenPositions p1 p2 b
+                | (x1 == x2) && (y1 < y2) = isHorizontalPathClearBetweenPositions (x1, y1+1) p2 (x1, y1+1) b
+                | (x1 == x2) && (y1 > y2) = isHorizontalPathClearBetweenPositions (x1, y1-1) p2 (x1, y1-1) b
+                | (y1 == y2) && (x1 < x2) = isVerticalPathClearBetweenPositions (x1+1, y1) p2 (x1+1, y1) b
+                | (y1 == y2) && (x1 > x2) = isVerticalPathClearBetweenPositions (x1-1, y1) p2 (x1-1, y1) b
+                | (x2 < x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1-1, y1-1) p2 (x1-1, y1-1) b
+                | (x2 < x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1-1, y1+1) p2 (x1-1, y1+1) b
+                | (x2 > x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1+1, y1-1) p2 (x1+1, y1-1) b
+                | (x2 > x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1+1, y1+1) p2 (x1+1, y1+1) b
+                where x1 = fst p1
+                      x2 = fst p2
+                      y1 = snd p1
+                      y2 = snd p2
+
+isHorizontalPathClearBetweenPositions :: BoardPosition -> BoardPosition -> BoardPosition -> Board -> Bool
+isHorizontalPathClearBetweenPositions p1 p2 p3 b
+                | p1 == p2 = True
+                | ((isPositionEmpty p2 b) == False) = False
+                | ((isPositionEmpty p1 b) == False && (p1 /= p3)) = False
+                | y2 < y1 = isHorizontalPathClearBetweenPositions (x1,y1-1) p2 p1 b
+                | y2 > y1 = isHorizontalPathClearBetweenPositions (x1, y1+1) p2 p1 b
+                where x1 = fst p1
+                      x2 = fst p2
+                      y1 = snd p1
+                      y2 = snd p2
+
+isVerticalPathClearBetweenPositions :: BoardPosition -> BoardPosition -> BoardPosition -> Board -> Bool
+isVerticalPathClearBetweenPositions p1 p2 p3 b
+                | p1 == p2 = True
+                | ((isPositionEmpty p2 b) == False) = False
+                | ((isPositionEmpty p1 b) == False && (p1 /= p3)) = False 
+                | x2 < x1 = isVerticalPathClearBetweenPositions (x1-1,y1) p2 p1 b
+                | x2 > x1 = isVerticalPathClearBetweenPositions (x1+1,y1) p2 p1 b
+                where x1 = fst p1
+                      x2 = fst p2
+                      y1 = snd p1
+                      y2 = snd p2
+
+isDiagonalPathClearBetweenPositions :: BoardPosition -> BoardPosition -> BoardPosition -> Board -> Bool
+isDiagonalPathClearBetweenPositions p1 p2 p3 b
+                | p1 == p2 = True
+                | ((isPositionEmpty p2 b) == False) = False
+                | ((isPositionEmpty p1 b) == False && (p1 /= p3)) = False 
+                | (x2 < x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1-1,y1-1) p2 p1 b
+                | (x2 < x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1-1,y1+1) p2 p1 b
+                | (x2 > x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1+1,y1-1) p2 p1 b
+                | (x2 > x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1+1,y1+1) p2 p1 b
+                where x1 = fst p1
+                      x2 = fst p2
+                      y1 = snd p1
+                      y2 = snd p2
+
+pawnMovements :: BoardPosition -> Board -> [BoardPosition]
+pawnMovements p b = filter (isPositionOnBoard) $ (moveForwardOnce p b) ++ (moveForwardTwice p b)
+
+rookMovements :: BoardPosition -> Board -> [BoardPosition]
+rookMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && (isPositionEmpty x b || hasOppositePlayerPiece (p1, p2) x b)) [(p1 + fst s, p2 + snd s) | s <- straightMovements]
+
+knightMovements :: BoardPosition -> Board -> [BoardPosition]
+knightMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && (isPositionEmpty x b || hasOppositePlayerPiece (p1,p2) x b)) [(p1+1,p2+2), (p1+1,p2-2), (p1-1,p2+2), (p1-1,p2-2), (p1+2,p2+1), (p1+2,p2-1), (p1-2,p2+1), (p1-2,p2-1)]
+
+bishopMovements :: BoardPosition -> Board -> [BoardPosition]
+bishopMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && (isPositionEmpty x b || hasOppositePlayerPiece (p1,p2) x b)) [(p1 + fst s, p2 + snd s) | s <- diagonalMovements]
+
+queenMovements :: BoardPosition -> Board -> [BoardPosition]
+queenMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && (isPositionEmpty x b || hasOppositePlayerPiece (p1,p2) x b)) [(p1 + fst s, p2 + snd s) | s <- (straightMovements ++ diagonalMovements)]
+
+kingMovements :: BoardPosition -> Board -> [BoardPosition]
+kingMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && (isPositionEmpty x b || hasOppositePlayerPiece (p1,p2) x b)) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
+
+updateBoard :: BoardPosition -> Maybe Piece -> [[Maybe Piece]] -> [[Maybe Piece]]
+updateBoard (p1,p2) e (x:xs)
+    | u == 0 = updateRow v e x : xs
+    | otherwise = x : updateBoard (u,p2) e xs
+    where u = p1-1
+          v = p2-1
+
+updateRow :: Int -> Maybe Piece -> [Maybe Piece] -> [Maybe Piece]
+updateRow 0 e (x:xs) = e:xs
+updateRow n e (x:xs) = x : updateRow (n) e xs
+updateRow _ _ [] = []
+
+updateBoardUsingPosition :: BoardPosition -> BoardPosition -> Board -> [[Maybe Piece]]
+updateBoardUsingPosition p1 p2 b = case (getPieceInPosition p1 b) of
+                                   Nothing -> b
+                                   x       -> updateBoard p2 x b
+
+removeFromBoardAtPosition :: BoardPosition -> Board -> Board
+removeFromBoardAtPosition p b = case (getPieceInPosition p b) of
+                                Nothing -> b
+                                Just _  -> updateBoard p Nothing b
+
+movePieceBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Board
+movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b)
+                                     then removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
+                                     else b
+
+isValidMove :: BoardPosition -> BoardPosition -> Board -> Bool
+isValidMove p1 p2 b = case (getPieceInPosition p1 b) of
+                          Nothing          -> False
+                          Just (Piece c p) -> case p of
+                                                  Pawn   -> (p2 `elem` (pawnMovements p1 b)) && (isPositionEmpty p2 b)
+                                                  Rook   -> (p2 `elem` (rookMovements p1 b)) && (isPositionEmpty p2 b)
+                                                  Knight -> (p2 `elem` (knightMovements p1 b)) && (isPositionEmpty p2 b)
+                                                  Bishop -> (p2 `elem` (bishopMovements p1 b)) && (isPositionEmpty p2 b)
+                                                  Queen  -> (p2 `elem` (queenMovements p1 b)) && (isPositionEmpty p2 b)
+                                                  King   -> (p2 `elem` (kingMovements p1 b)) && (isPositionEmpty p2 b)

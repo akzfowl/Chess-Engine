@@ -9,11 +9,8 @@ instance Show Piece where
     show (Piece White p) = "W" ++ show p
     show (Piece Black p) = "B" ++ show p
 
-pointValue :: PieceType -> Int
-pointValue pieceType = case pieceType of
-    Pawn   -> 1
-    Rook   -> 5
-    Knight -> 3
-    Bishop -> 3
-    Queen  -> 9
-    King   -> 500
+pieceType :: Piece -> PieceType
+pieceType (Piece _ p) = p
+
+pieceColour :: Piece -> Colour
+pieceColour (Piece c _) = c
