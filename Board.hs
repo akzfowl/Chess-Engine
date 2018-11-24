@@ -177,14 +177,20 @@ doesPositionResultInCheck :: Colour -> BoardPosition -> Board -> Bool
 doesPositionResultInCheck = undefined
 
 canCastleKingSide :: Colour -> Board -> Bool
-canCastleKingSide White b = (isHorizontalPathClearBetweenPositions (5,1) (8,1) (5,1) b) && not (any (\x -> doesPositionResultInCheck White x b) [(5,1),(6,1),(7,1)])
-canCastleKingSide Black b = (isHorizontalPathClearBetweenPositions (5,8) (8,8) (5,8) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(5,8),(6,8),(7,8)])
+canCastleKingSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,8) (1,5) b) && not (any (\x -> doesPositionResultInCheck White x b) [(1,5),(1,6),(1,7)])
+canCastleKingSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,8) (8,5) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(8,5),(8,5),(8,7)])
 
 canCastleQueenSide :: Colour -> Board -> Bool
-canCastleQueenSide White b = (isHorizontalPathClearBetweenPositions (5,1) (1,1) (5,1) b) && not (any (\x -> doesPositionResultInCheck White x b) [(5,1),(4,1),(3,1)])
-canCastleQueenSide Black b = (isHorizontalPathClearBetweenPositions (5,8) (1,8) (5,8) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(5,1),(6,1),(7,1)])
+canCastleQueenSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,1) (1,5) b) && not (any (\x -> doesPositionResultInCheck White x b) [(1,5),(1,4),(1,3)])
+canCastleQueenSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,1) (8,5) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(8,5),(8,4),(8,3)])
 
---castleKingSide :: Colour -> Board 
+castleKingSide :: Colour -> Board -> Board
+castleKingSide White b = movePieceBetweenPositions (1,8) (1,6) (movePieceBetweenPositions (1,5) (1,7) b)
+castleKingSide Black b = movePieceBetweenPositions (8,8) (8,6) (movePieceBetweenPositions (8,5) (8,7) b)
+
+castleQueenSide :: Colour -> Board -> Board
+castleQueenSide White b = movePieceBetweenPositions (1,1) (1,4) (movePieceBetweenPositions (1,5) (1,3) b)
+castleQueenSide Black b = movePieceBetweenPositions (8,1) (8,4) (movePieceBetweenPositions (8,5) (8,3) b)
 
 singleStraightMovements :: [BoardPosition]
 singleStraightMovements = [(1,0), (0,1), (0,-1), (-1,0)]
@@ -343,3 +349,9 @@ isValidMove p1 p2 b = case (getPieceInPosition p1 b) of
                                                   Bishop -> (p2 `elem` (bishopMovements p1 b))
                                                   Queen  -> (p2 `elem` (queenMovements p1 b))
                                                   King   -> (p2 `elem` (kingMovements p1 b))
+
+initialGameState :: GameState
+initialGameState = (White, initialBoard)
+
+initializeGame :: Game
+initializeGame = (initialGameState, [])
