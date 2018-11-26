@@ -3,6 +3,7 @@ module Board where
 import Colour
 import PieceType
 import Piece
+import Data.List
 
 type Square = Maybe Piece
 type Board = [[Square]]
@@ -20,13 +21,27 @@ displaySquare :: Square -> String
 displaySquare Nothing = "  --   "
 displaySquare (Just p) = "  " ++ show p ++ "   "
 
-{-draw (Board _ y _ m) = unlines (concat (interleave rowPattern (map eachRow u)))
-  where
-    u = (convertListToListOfLists (Map.toList m))
-    rowPattern = [intersperse '+' (replicate y '-')]
-    eachRow r = combine (interleave bar (map showPlayer r))
-    combine = foldr1 (zipWith (++))
-    bar = replicate y "|"-}
+-- Show white bottom
+formattedDisplayBoard1 :: Board -> IO()
+formattedDisplayBoard1 b = putStrLn (unlines ((border : boardStr) ++ [border, bottom]))
+                           where boardStr = zipWith showLine (reverse [1..8]) $ reverse b
+                                 showSquare Nothing  = "  "
+                                 showSquare (Just x) = show x
+                                 border = "  " ++ (replicate 41 '-')
+                                 showLine :: Integer -> [Square] -> String
+                                 showLine i xs = (intercalate " | " $ (show i) : (map showSquare xs)) ++ " |"
+                                 bottom = (intercalate " |  " $ (" " : map (:[])['a'..'h'])) ++ " |"
+
+-- Show white top
+formattedDisplayBoard2 :: Board -> IO()
+formattedDisplayBoard2 b = putStrLn (unlines ((border : boardStr) ++ [border, bottom]))
+                           where boardStr = zipWith showLine ([1..8]) $ b
+                                 showSquare Nothing  = "  "
+                                 showSquare (Just x) = show x
+                                 border = "  " ++ (replicate 41 '-')
+                                 showLine :: Integer -> [Square] -> String
+                                 showLine i xs = (intercalate " | " $ (show i) : (map showSquare xs)) ++ " |"
+                                 bottom = (intercalate " |  " $ (" " : map (:[])['a'..'h'])) ++ " |"
 
 boardToHumanReadable :: BoardPosition -> HumanReadablePosition
 boardToHumanReadable (p1, p2) = case p1 of
