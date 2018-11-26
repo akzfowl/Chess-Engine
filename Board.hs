@@ -19,14 +19,14 @@ displayBoard b = putStrLn (unlines (map (concatMap displaySquare) b))
 
 displaySquare :: Square -> String
 displaySquare Nothing = "  --   "
-displaySquare (Just p) = "  " ++ show p ++ "   "
+displaySquare (Just p) = "  " ++ show p ++ "    "
 
 -- Show white bottom
 formattedDisplayBoard1 :: Board -> IO()
 formattedDisplayBoard1 b = putStrLn (unlines ((border : boardStr) ++ [border, bottom]))
                            where boardStr = zipWith showLine (reverse [1..8]) $ reverse b
                                  showSquare Nothing  = "  "
-                                 showSquare (Just x) = show x
+                                 showSquare (Just x) = show x ++ " "
                                  border = "  " ++ (replicate 41 '-')
                                  showLine :: Integer -> [Square] -> String
                                  showLine i xs = (intercalate " | " $ (show i) : (map showSquare xs)) ++ " |"
@@ -37,7 +37,7 @@ formattedDisplayBoard2 :: Board -> IO()
 formattedDisplayBoard2 b = putStrLn (unlines ((border : boardStr) ++ [border, bottom]))
                            where boardStr = zipWith showLine ([1..8]) $ b
                                  showSquare Nothing  = "  "
-                                 showSquare (Just x) = show x
+                                 showSquare (Just x) = show x ++ " "
                                  border = "  " ++ (replicate 41 '-')
                                  showLine :: Integer -> [Square] -> String
                                  showLine i xs = (intercalate " | " $ (show i) : (map showSquare xs)) ++ " |"
