@@ -164,6 +164,12 @@ isEnPassantMovePossible (c2, b2) (c1, b1) | (c1 == White) = filter (\x -> checkF
                                                 blackEnPassantPositions = filter (\x -> not (isPositionEmpty x b2)) [(p1, p2) | p1 <- [3], p2 <- [0..7]]
                                                 currentBlackEnPassantPositions = filter (\x -> isOccupiedByColour c1 x b2 && isPositionOccupiedByPawn x b2) blackEnPassantPositions
 
+enPassantMove :: GameState -> BoardPosition -> [Board]
+enPassantMove (c1, b1) (p1, p2)
+                | (c1 == White) = [movePieceBetweenPositions pos (p1-1, p2) (removeFromBoardAtPosition (p1, p2) b1) | pos <- pawnPositions]
+                | (c1 == Black) = [movePieceBetweenPositions pos (p1+1, p2) (removeFromBoardAtPosition (p1, p2) b1) | pos <- pawnPositions]
+                where pawnPositions = filter (\x -> isOccupiedByColour c1 x b1 && isPositionOccupiedByPawn x b1) [(i,j) | i <- [p1], j <- [p2-1,p2+1], j >= 1, j<= 8]
+
 hasKingMovedAlready :: Colour -> GameHistory -> Bool
 hasKingMovedAlready c gh | c == White = checkPiecePositions c King (0,4) gh
                          | c == Black = checkPiecePositions c King (7,4) gh
@@ -188,16 +194,18 @@ checkKingPositions c p (x:xs) | (getPieceInPosition p b) /= (Just (Piece c King)
                               | otherwise = checkKingPositions c p xs
                               where b = (snd x)-}
 
-doesPositionResultInCheck :: Colour -> BoardPosition -> Board -> Bool
-doesPositionResultInCheck = undefined
+doesPositionResultInCheck :: BoardPosition -> BoardPosition -> Board -> Bool
+doesPositionResultInCheck kingP p b = kingP `elem` (generateLegalMoves p b)
+
+
 
 canCastleKingSide :: Colour -> Board -> Bool
-canCastleKingSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,8) (1,5) b) && not (any (\x -> doesPositionResultInCheck White x b) [(1,5),(1,6),(1,7)])
-canCastleKingSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,8) (8,5) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(8,5),(8,5),(8,7)])
+canCastleKingSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,8) (1,5) b) && not (isUnderCheck (1,5) (1,6) b) && not (isUnderCheck (1,5) (1,7) b)
+canCastleKingSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,8) (8,5) b) && not (isUnderCheck (8,5) (8,6) b) && not (isUnderCheck (8,5) (8,7) b)
 
 canCastleQueenSide :: Colour -> Board -> Bool
-canCastleQueenSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,1) (1,5) b) && not (any (\x -> doesPositionResultInCheck White x b) [(1,5),(1,4),(1,3)])
-canCastleQueenSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,1) (8,5) b) && not (any (\x -> doesPositionResultInCheck Black x b) [(8,5),(8,4),(8,3)])
+canCastleQueenSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,1) (1,5) b) && not (isUnderCheck (1,5) (1,4) b) && not (isUnderCheck (1,5) (1,3) b)
+canCastleQueenSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,1) (8,5) b) && not (isUnderCheck (8,5) (8,4) b) && not (isUnderCheck (8,5) (8,3) b)
 
 castleKingSide :: Colour -> Board -> Board
 castleKingSide White b = movePieceBetweenPositions (1,8) (1,6) (movePieceBetweenPositions (1,5) (1,7) b)
@@ -206,6 +214,26 @@ castleKingSide Black b = movePieceBetweenPositions (8,8) (8,6) (movePieceBetween
 castleQueenSide :: Colour -> Board -> Board
 castleQueenSide White b = movePieceBetweenPositions (1,1) (1,4) (movePieceBetweenPositions (1,5) (1,3) b)
 castleQueenSide Black b = movePieceBetweenPositions (8,1) (8,4) (movePieceBetweenPositions (8,5) (8,3) b)
+
+castling :: Bool -> Bool -> Bool -> Colour -> Board -> [Board]
+castling True _ _ _ _ = []
+castling False False False c b
+                | p1 && p2  = [castleKingSide c b] ++ [castleQueenSide c b]
+                | p1        = [castleKingSide c b]
+                | p2        = [castleQueenSide c b]
+                | otherwise = []
+                where p1 = canCastleKingSide c b
+                      p2 = canCastleQueenSide c b
+castling False True False c b
+                | p2        = [castleQueenSide c b]
+                | otherwise = []
+                where p1 = canCastleKingSide c b
+                      p2 = canCastleQueenSide c b
+castling False False True c b
+                | p1        = [castleKingSide c b]
+                | otherwise = []
+                where p1 = canCastleKingSide c b
+                      p2 = canCastleQueenSide c b
 
 singleStraightMovements :: [BoardPosition]
 singleStraightMovements = [(1,0), (0,1), (0,-1), (-1,0)]
@@ -293,6 +321,15 @@ isPathClear p1 p2 b
                 {-where piece1 = getPieceInPosition p1 b
                       piece2 = getPieceInPosition p2 b-}
 
+getMovementsForPiece :: PieceType -> BoardPosition -> Board -> [BoardPosition]
+getMovementsForPiece p bp b = case p of
+                                  Pawn   -> pawnMovements bp b
+                                  Rook   -> rookMovements bp b
+                                  Knight -> knightMovements bp b
+                                  Bishop -> bishopMovements bp b
+                                  Queen  -> queenMovements bp b
+                                  King   -> kingMovements bp b
+
 pawnMovements :: BoardPosition -> Board -> [BoardPosition]
 pawnMovements p b = filter (isPositionOnBoard) $ (moveForwardOnce p b) ++ (moveForwardTwice p b) ++ (moveDiagonallyOnceToTheRight p b) ++ (moveDiagonallyOnceToTheLeft p b)
 
@@ -338,11 +375,22 @@ removeFromBoardAtPosition p b = case (getPieceInPosition p b) of
                                 Nothing -> b
                                 Just _  -> updateBoard p Nothing b
 
+isPositionOccupiedByPiece :: PieceType -> BoardPosition -> Board -> Bool
+isPositionOccupiedByPiece p bp b = case (getPieceInPosition bp b) of
+                                   Nothing          -> False
+                                   Just (Piece _ c) -> c == p
+
 isPositionOccupiedByPawn :: BoardPosition -> Board -> Bool
 isPositionOccupiedByPawn p1 b = case (getPieceInPosition p1 b) of
                                 Nothing             -> False
                                 Just (Piece _ Pawn) -> True
                                 _                   -> False
+
+isPositionOccupiedByKing :: BoardPosition -> Board -> Bool
+isPositionOccupiedByKing p1 b = case (getPieceInPosition p1 b) of
+                                Nothing             -> False
+                                Just (Piece _ King) -> True
+                                _                   -> False                               
 
 movePieceBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Board
 movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByWhitePiece p1 b)
@@ -364,6 +412,59 @@ isValidMove p1 p2 b = case (getPieceInPosition p1 b) of
                                                   Bishop -> (p2 `elem` (bishopMovements p1 b))
                                                   Queen  -> (p2 `elem` (queenMovements p1 b))
                                                   King   -> (p2 `elem` (kingMovements p1 b))
+
+
+
+isUnderCheck :: BoardPosition -> BoardPosition -> Board -> Bool
+isUnderCheck p1 p2 bp = case (getColourOfPieceInPosition p1 bp) of
+                            Nothing  -> False
+                            Just c   -> if (null (checkPositions c (movePieceBetweenPositions p1 p2 bp)))
+                                        then False
+                                        else True
+
+checkPositions :: Colour -> Board -> [BoardPosition]
+checkPositions c b = filter (\x -> doesPositionResultInCheck kingPosition x b) [positions | positions <- opponentPiecePositions]
+                     where opponentPiecePositions = filter (\x -> not (isPositionEmpty x b) && isOccupiedByColour (opponent c) x b) [(u,v) | u <- [1..8], v <- [1..8]]
+                           ownPiecePositions      = filter (\x -> not (isPositionEmpty x b) && isOccupiedByColour c x b) [(u,v) | u <- [1..8], v <- [1..8]]
+                           kingPosition           = head (filter (\x -> isPositionOccupiedByKing x b) [positions | positions <- ownPiecePositions])
+
+generateBoardMoves :: Board -> [[[BoardPosition]]]
+generateBoardMoves b = [map (validatePosition b) [(p1, p2) | p2 <- [1..8]] | p1 <- [1..8]]
+
+validatePosition :: Board -> BoardPosition -> [BoardPosition]
+validatePosition b p
+                | (isPositionEmpty p b) = []
+                | otherwise = filter (\x -> not (isUnderCheck p x b)) (generateLegalMoves p b)
+
+generateLegalMoves :: BoardPosition -> Board -> [BoardPosition]
+generateLegalMoves p b = case (getPieceInPosition p b) of
+                             Nothing -> []
+                             Just (Piece _ pi) -> getMovementsForPiece pi p b
+  {-getMovementsForPiece pi p b
+                         where pi = getPieceInPosition p-}
+
+generateMoves :: BoardPosition -> Board -> [Board]
+generateMoves (p1, p2) b = map (\x -> movePieceBetweenPositions (p1, p2) x b) ((generateBoardMoves b) !! p1 !! p2)
+
+positionsWithColour :: Colour -> Board -> [BoardPosition]
+positionsWithColour c b = 
+                filter (\x -> isOccupiedByColour c x b) listOfPositions
+                where listOfPositions = filter (\x -> not (isPositionEmpty x b)) [(i,j) | i <- [1..8], j<- [1..8]]
+
+generateNextStates :: GameState -> [GameState]
+generateNextStates (colour, board) = [(opponent colour, board2) | positions <- positionsWithColour colour board, board2 <- generateMoves positions board]
+
+generateAllNextStates :: Game -> [GameState]
+generateAllNextStates (currentState, []) = generateNextStates currentState
+generateAllNextStates (currentState, history)
+                | null enPassantPossibility = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board]
+                | otherwise      = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board] ++ [(opponent currentTurn, board2) | board2 <- enPassantMove currentState (head enPassantPossibility)]
+                where currentTurn = fst currentState
+                      board = snd currentState
+                      kingMoved = hasKingMovedAlready currentTurn history
+                      kingSideRookMoved = hasKingSideRookMovedAlready currentTurn history
+                      queenSideRookMoved = hasQueenSideRookMovedAlready currentTurn history
+                      enPassantPossibility = isEnPassantMovePossible currentState (last history)
 
 initialGameState :: GameState
 initialGameState = (White, initialBoard)
