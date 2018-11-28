@@ -1,5 +1,6 @@
 module Board where
 
+import System.Random
 import Colour
 import PieceType
 import Piece
@@ -478,7 +479,7 @@ generateLegalMoves p b = case (getPieceInPosition p b) of
                          where pi = getPieceInPosition p-}
 
 generateMoves :: BoardPosition -> Board -> [Board]
-generateMoves (p1, p2) b = map (\x -> movePieceBetweenPositions (p1, p2) x b) ((generateBoardMoves b) !! p1 !! p2)
+generateMoves (p1, p2) b = map (\x -> movePieceBetweenPositions (p1, p2) x b) ((generateBoardMoves b) !! (p1-1) !! (p2-1))
 
 positionsWithColour :: Colour -> Board -> [BoardPosition]
 positionsWithColour c b = 
@@ -500,8 +501,53 @@ generateAllNextStates (_, currentState, history)
                       queenSideRookMoved = hasQueenSideRookMovedAlready currentTurn history
                       enPassantPossibility = isEnPassantMovePossible currentState (last history)
 
+{-getIndex :: IO Int -> Int
+getIndex b = do i <- b
+                return i
+
+getRandomNextState :: Game -> Int -> GameState
+getRandomNextState g i = (gameStates !! (getIndex index))
+                         where generator = mkStdGen i
+                               gameStates = generateAllNextStates g
+                               len = length gameStates
+                               index = randomRIO (0, len-1)-}
+
+getRandomNextState :: Game -> Int -> GameState
+getRandomNextState gs t =
+    let gen = mkStdGen t
+        states = take 3 (generateAllNextStates gs)
+        size = length states
+        (index, newgen) = randomR (0, size-1) gen :: (Int, StdGen)
+    in (states!!index)
+
 initialGameState :: GameState
 initialGameState = (White, initialBoard)
+
+sampleBoard :: Board
+sampleBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Just(Piece White Bishop), Just(Piece White Knight), Just(Piece White Rook)],
+                [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Just(Piece Black Knight), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                [Just(Piece Black Rook), Nothing, Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
+
+sampleGameState :: GameState
+sampleGameState = (White, sampleBoard)
+
+sampleGameState2 :: GameState
+sampleGameState2 = (White, sampleBoard2)
+
+sampleBoard2 :: Board
+sampleBoard2 = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Just(Piece White Bishop), Just(Piece White Knight), Just(Piece White Rook)],
+                [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Just(Piece Black Knight), Just(Piece Black Pawn), Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                [Just(Piece Black Pawn), Nothing, Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                [Just(Piece Black Rook), Nothing, Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
 initializeWhiteAIGame :: Game
 initializeWhiteAIGame = (White, initialGameState, [])
