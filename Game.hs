@@ -15,26 +15,32 @@ main = do putStrLn("Which side would you like?(W/B) Or E to exit.")
                             main
               Just co -> case co of
                             "W" -> do putStrLn("You have chosen to play White")
-                                      formattedDisplayBoard2 initialBoard
-                                      startGame initialBoard White
-                            "B" -> do putStrLn("You have chosen to play Black")
                                       formattedDisplayBoard1 initialBoard
-                                      startGame initialBoard Black
+                                      startGame initializeBlackAIGame White
+                            "B" -> do putStrLn("You have chosen to play Black")
+                                      formattedDisplayBoard2 initialBoard
+                                      startGame initializeWhiteAIGame Black
                             "E" -> putStrLn("Thanks for playing!")
                             _   -> do putStrLn("Please enter a valid option")
                                       main
 
-startGame :: Board -> Colour -> IO()
-startGame b c = undefined{-do putStrLn "Enter your move in standard notation"
+startGame :: Game -> Colour -> IO()
+startGame g c = do putStrLn "Enter your move in standard notation"
                    m <- getLine
                    case readMaybe m of
                        Nothing -> do putStrLn "Please enter a valid move"
-                                     startGame b c
-                       Just s  -> undefined{-move initializeGame oldPosition newPosition 
-                                  where parserOutput = (parseMove s)
+                                     startGame g c
+                       Just s  -> do putStrLn "Move succesful"
+                                     if (getAIColour g) == Black
+                                     then formattedDisplayBoard1 newBoard
+                                     else formattedDisplayBoard2 newBoard
+                                  where b = getCurrentBoardFromGame g
+                                        parserOutput = (parseMove s)
                                         newPosition = snd parserOutput
                                         pieceMoved = fst parserOutput
-                                        oldPosition = getCurrentPositionBasedOnMove c parserOutput b-}-}
+                                        oldPosition = getCurrentPositionBasedOnMove c parserOutput b
+                                        newGame = move g oldPosition newPosition
+                                        newBoard = getCurrentBoardFromGame newGame
 
 getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> BoardPosition
 getCurrentPositionBasedOnMove c (p, (x, y)) b = head $ filter (\a -> isPositionOccupiedByPiece p a b && (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
@@ -42,10 +48,11 @@ getCurrentPositionBasedOnMove c (p, (x, y)) b = head $ filter (\a -> isPositionO
 
 
 move :: Game -> BoardPosition -> BoardPosition -> Game
-move g bp1 bp2 = undefined{-((newColour, newBoard), hist ++ [currentState])
-                 where currentState = fst g
-                       hist = snd g
-                       colour = fst currentState
-                       board = snd currentState
+move g bp1 bp2 = (aiColour,(newColour, newBoard), hist ++ [currentState])
+                 where aiColour = getAIColour g
+                       currentState = getGameState g
+                       hist = getGameHistory g
+                       colour = getCurrentColourFromGameState currentState
+                       board = getCurrentBoardFromGameState currentState
                        newBoard = movePieceBetweenPositions bp1 bp2 board
-                       newColour = opponent colour-}
+                       newColour = opponent colour

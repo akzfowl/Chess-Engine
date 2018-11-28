@@ -12,7 +12,28 @@ type HumanReadablePosition = (Char, Int)
 
 type GameState = (Colour, Board)
 type GameHistory = [GameState]
-type Game = (GameState, GameHistory)
+type Game = (Colour, GameState, GameHistory)
+
+getAIColour :: Game -> Colour
+getAIColour (c, _, _) = c
+
+getGameState :: Game -> GameState
+getGameState (_, gs, _) = gs
+
+getGameHistory :: Game -> GameHistory
+getGameHistory (_, _, gh) = gh
+
+getCurrentColourFromGame :: Game -> Colour
+getCurrentColourFromGame (_, gs, _) = getCurrentColourFromGameState gs
+
+getCurrentBoardFromGame :: Game -> Board
+getCurrentBoardFromGame (_, gs, _) = getCurrentBoardFromGameState gs
+
+getCurrentColourFromGameState :: GameState -> Colour
+getCurrentColourFromGameState (c, _) = c
+
+getCurrentBoardFromGameState :: GameState -> Board
+getCurrentBoardFromGameState (_, b) = b
 
 displayBoard :: Board -> IO()
 displayBoard b = putStrLn (unlines (map (concatMap displaySquare) b))
@@ -348,6 +369,11 @@ queenMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1
 kingMovements :: BoardPosition -> Board -> [BoardPosition]
 kingMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1, p2) x b) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
 
+isValidPosition :: BoardPosition -> Bool
+isValidPosition (p1, p2) = if(p1 < 1 || p1 > 8 || p2 < 1 || p2 > 8)
+                           then False
+                           else True
+
 updateBoard :: BoardPosition -> Maybe Piece -> [[Maybe Piece]] -> [[Maybe Piece]]
 updateBoard (p1,p2) e (x:xs)
     | u == 0 = updateRow v e x : xs
@@ -357,8 +383,18 @@ updateBoard (p1,p2) e (x:xs)
 
 updateRow :: Int -> Maybe Piece -> [Maybe Piece] -> [Maybe Piece]
 updateRow 0 e (x:xs) = e:xs
-updateRow n e (x:xs) = x : updateRow (n) e xs
+updateRow n e (x:xs) = x : updateRow (n-1) e xs
 updateRow _ _ [] = []
+
+{-updateBoard :: BoardPosition -> Maybe Piece -> [[Maybe Piece]] -> [[Maybe Piece]]
+updateBoard (p1,p2) e (x:xs)
+    | p1 == 0 = updateRow p2 e x : xs
+    | otherwise = x : updateBoard (p1-1,p2) e xs
+
+updateRow :: Int -> Maybe Piece -> [Maybe Piece] -> [Maybe Piece]
+updateRow 0 e (x:xs) = e:xs
+updateRow n e (x:xs) = x : updateRow (n-1) e xs
+updateRow _ _ [] = []-}
 
 updateBoardUsingPosition :: BoardPosition -> BoardPosition -> Board -> [[Maybe Piece]]
 updateBoardUsingPosition p1 p2 b = case (getPieceInPosition p1 b) of
@@ -413,8 +449,6 @@ isValidMove p1 p2 b = case (getPieceInPosition p1 b) of
                                                   Queen  -> (p2 `elem` (queenMovements p1 b))
                                                   King   -> (p2 `elem` (kingMovements p1 b))
 
-
-
 isUnderCheck :: BoardPosition -> BoardPosition -> Board -> Bool
 isUnderCheck p1 p2 bp = case (getColourOfPieceInPosition p1 bp) of
                             Nothing  -> False
@@ -455,8 +489,8 @@ generateNextStates :: GameState -> [GameState]
 generateNextStates (colour, board) = [(opponent colour, board2) | positions <- positionsWithColour colour board, board2 <- generateMoves positions board]
 
 generateAllNextStates :: Game -> [GameState]
-generateAllNextStates (currentState, []) = generateNextStates currentState
-generateAllNextStates (currentState, history)
+generateAllNextStates (_, currentState, []) = generateNextStates currentState
+generateAllNextStates (_, currentState, history)
                 | null enPassantPossibility = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board]
                 | otherwise      = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board] ++ [(opponent currentTurn, board2) | board2 <- enPassantMove currentState (head enPassantPossibility)]
                 where currentTurn = fst currentState
@@ -469,5 +503,8 @@ generateAllNextStates (currentState, history)
 initialGameState :: GameState
 initialGameState = (White, initialBoard)
 
-initializeGame :: Game
-initializeGame = (initialGameState, [])
+initializeWhiteAIGame :: Game
+initializeWhiteAIGame = (White, initialGameState, [])
+
+initializeBlackAIGame :: Game
+initializeBlackAIGame = (Black, initialGameState, [])

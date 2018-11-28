@@ -24,4 +24,5 @@ smallLetterToInt p = case p of
 
 
 parseMove :: String -> (PieceType, (Int,Int))
-parseMove s = foldl (\acc x -> if isLower x then (Pawn, (smallLetterToInt x,snd (snd acc))) else if isUpper x then (capitalLetterToPieceType x, snd acc) else if isDigit x then (fst acc, (fst (snd acc),digitToInt x)) else (fst acc, snd acc)) (Pawn, (0,0)) s
+{-parseMove s = foldl (\acc x -> if isLower x then (Pawn, (smallLetterToInt x,snd (snd acc))) else if isUpper x then (capitalLetterToPieceType x, snd acc) else if isDigit x then (fst acc, (fst (snd acc),digitToInt x)) else (fst acc, snd acc)) (Pawn, (0,0)) s-}
+parseMove s = foldl (\acc x -> if isLower x && fst acc == Pawn then (Pawn, (fst (snd acc),smallLetterToInt x)) else if isLower x && fst acc /= Pawn then (fst acc, (fst (snd acc),smallLetterToInt x)) else if isUpper x then (capitalLetterToPieceType x, snd acc) else if isDigit x then (fst acc, (digitToInt x, snd (snd acc))) else (fst acc, snd acc)) (Pawn, (0,0)) s
