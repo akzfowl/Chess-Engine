@@ -55,27 +55,3 @@ playerMove g  = do putStrLn "Enter your move in standard notation"
                                         oldPosition = getCurrentPositionBasedOnMove c parserOutput b
                                         newGame = move g oldPosition newPosition
                                         newBoard = getCurrentBoardFromGame newGame
-
-getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> BoardPosition
-getCurrentPositionBasedOnMove c (p, (x, y)) b = head $ filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
-                                                where ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
-
-
-aiMakeMove :: Game -> GameState -> Game
-aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState])
-                        where aiColour = getAIColour g
-                              currentState = getGameState g
-                              hist = getGameHistory g
-                              colour = getCurrentColourFromGameState currentState
-                              newBoard = getCurrentBoardFromGameState newGameState
-                              newColour = opponent colour
-
-move :: Game -> BoardPosition -> BoardPosition -> Game
-move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
-                 where aiColour = getAIColour g
-                       currentState = getGameState g
-                       hist = getGameHistory g
-                       colour = getCurrentColourFromGameState currentState
-                       board = getCurrentBoardFromGameState currentState
-                       newBoard = movePieceBetweenPositions bp1 bp2 board
-                       newColour = opponent colour

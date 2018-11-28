@@ -15,26 +15,6 @@ type GameState = (Colour, Board)
 type GameHistory = [GameState]
 type Game = (Colour, GameState, GameHistory)
 
-getAIColour :: Game -> Colour
-getAIColour (c, _, _) = c
-
-getGameState :: Game -> GameState
-getGameState (_, gs, _) = gs
-
-getGameHistory :: Game -> GameHistory
-getGameHistory (_, _, gh) = gh
-
-getCurrentColourFromGame :: Game -> Colour
-getCurrentColourFromGame (_, gs, _) = getCurrentColourFromGameState gs
-
-getCurrentBoardFromGame :: Game -> Board
-getCurrentBoardFromGame (_, gs, _) = getCurrentBoardFromGameState gs
-
-getCurrentColourFromGameState :: GameState -> Colour
-getCurrentColourFromGameState (c, _) = c
-
-getCurrentBoardFromGameState :: GameState -> Board
-getCurrentBoardFromGameState (_, b) = b
 
 displayBoard :: Board -> IO()
 displayBoard b = putStrLn (unlines (map (concatMap displaySquare) b))
@@ -65,6 +45,30 @@ formattedDisplayBoard2 b = putStrLn (unlines ((border : boardStr) ++ [border, bo
                                  showLine i xs = (intercalate " | " $ (show i) : (map showSquare xs)) ++ " |"
                                  bottom = (intercalate " |  " $ (" " : map (:[])['a'..'h'])) ++ " |"
 
+-- Functions to get specific portions of the Game and GameState
+getAIColour :: Game -> Colour
+getAIColour (c, _, _) = c
+
+getGameState :: Game -> GameState
+getGameState (_, gs, _) = gs
+
+getGameHistory :: Game -> GameHistory
+getGameHistory (_, _, gh) = gh
+
+getCurrentColourFromGame :: Game -> Colour
+getCurrentColourFromGame (_, gs, _) = getCurrentColourFromGameState gs
+
+getCurrentBoardFromGame :: Game -> Board
+getCurrentBoardFromGame (_, gs, _) = getCurrentBoardFromGameState gs
+
+getCurrentColourFromGameState :: GameState -> Colour
+getCurrentColourFromGameState (c, _) = c
+
+getCurrentBoardFromGameState :: GameState -> Board
+getCurrentBoardFromGameState (_, b) = b
+
+
+-- Position convertors (currently not used)
 boardToHumanReadable :: BoardPosition -> HumanReadablePosition
 boardToHumanReadable (p1, p2) = case p1 of
     1 -> ('a',p2)
@@ -87,6 +91,7 @@ humanReadableToBoard (p1, p2) = case p1 of
     'g' -> (7,p2)
     'h' -> (8,p2)
 
+-- Initial board for all games
 initialBoard :: Board
 initialBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Just(Piece White Bishop), Just(Piece White Knight), Just(Piece White Rook)],
                 [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
@@ -97,9 +102,11 @@ initialBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece Wh
                 [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                 [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
+-- Empty board in case needed
 emptyBoard :: Board
 emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
 
+-- Primitive evaluator of both players' values based on the values ascribed to their pieces.
 getTotalValueOfPlayers :: Board -> (Int, Int)
 getTotalValueOfPlayers = foldl compute (0, 0) . concat
                          where compute pts Nothing = pts
@@ -109,9 +116,11 @@ getTotalValueOfPlayers = foldl compute (0, 0) . concat
 positions :: [BoardPosition]
 positions = [1..8] >>= \p1 -> [1..8] >>= \p2 -> return (p1, p2)
 
+-- Position validator
 isPositionOnBoard :: BoardPosition -> Bool
 isPositionOnBoard (p1, p2) = (p1, p2) `elem` positions
 
+-- Query square functions
 getColourOfPieceInPosition :: BoardPosition -> Board -> Maybe Colour
 getColourOfPieceInPosition p b | isPositionOnBoard p = b !! (fst position) !! (snd position) >>= \p -> return (pieceColour p)
                                | otherwise = Nothing
@@ -132,6 +141,7 @@ isPositionEmpty p b = case (getColourOfPieceInPosition p b) of
                           Nothing -> True
                           Just _  -> False
 
+-- Colour queries
 isOccupiedByWhitePiece :: BoardPosition -> Board -> Bool
 isOccupiedByWhitePiece p b = getColourOfPieceInPosition p b == Just White
 
@@ -143,16 +153,19 @@ isOccupiedByColour c p b = case (getColourOfPieceInPosition p b) of
                            Nothing -> False
                            Just x -> c == x
 
+-- Player query
 hasOppositePlayerPiece :: BoardPosition -> BoardPosition -> Board -> Bool
 hasOppositePlayerPiece p1 p2 b = if (isOccupiedByBlackPiece p1 b && isOccupiedByWhitePiece p2 b) || (isOccupiedByWhitePiece p1 b && isOccupiedByBlackPiece p2 b)
                                  then True
                                  else False
 
+--Movement correction for pawns
 correctionForMovementDirection :: BoardPosition -> Board -> Int
 correctionForMovementDirection p b | isOccupiedByWhitePiece p b = 1
                                    | isOccupiedByBlackPiece p b = -1
                                    | otherwise = 0
 
+--Pawn movement helpers
 moveForwardOnce :: BoardPosition -> Board -> [BoardPosition]
 moveForwardOnce (p1, p2) b = [(p1 + 1 * correctionForMovementDirection (p1, p2) b, p2)]
 
@@ -171,13 +184,16 @@ moveDiagonallyOnceToTheRight (p1, p2) b | hasOppositePlayerPiece (p1, p2) (p1 + 
                                         | otherwise = []
                                         where right = (1*correctionForMovementDirection (p1, p2) b, 1)
 
+-- Special case (need to add all options)
 promotePawn :: Colour -> Square
 promotePawn c = Just (Piece c Queen)
 
+-- Special case for pawns
 checkForMoveForwardTwice :: Colour -> BoardPosition -> Board -> Board -> Bool
 checkForMoveForwardTwice White (p1, p2) b2 b1 = (isPositionEmpty (p1+2, p2) b2) && (isOccupiedByColour White (p1+2, p2) b1) && (isPositionOccupiedByPawn (p1+2, p2) b1)
 checkForMoveForwardTwice Black (p1, p2) b2 b1 = (isPositionEmpty (p1-2, p2) b2) && (isOccupiedByColour Black (p1+2, p2) b1) && (isPositionOccupiedByPawn (p1+2, p2) b1)
 
+-- Another special case
 isEnPassantMovePossible :: GameState -> GameState -> [BoardPosition]
 isEnPassantMovePossible (c2, b2) (c1, b1) | (c1 == White) = filter (\x -> checkForMoveForwardTwice c1 x b2 b1) currentWhiteEnPassantPositions
                                           | (c1 == Black) = filter (\x -> checkForMoveForwardTwice c1 x b2 b1) currentBlackEnPassantPositions
@@ -192,6 +208,7 @@ enPassantMove (c1, b1) (p1, p2)
                 | (c1 == Black) = [movePieceBetweenPositions pos (p1+1, p2) (removeFromBoardAtPosition (p1, p2) b1) | pos <- pawnPositions]
                 where pawnPositions = filter (\x -> isOccupiedByColour c1 x b1 && isPositionOccupiedByPawn x b1) [(i,j) | i <- [p1], j <- [p2-1,p2+1], j >= 1, j<= 8]
 
+-- Checks for castling
 hasKingMovedAlready :: Colour -> GameHistory -> Bool
 hasKingMovedAlready c gh | c == White = checkPiecePositions c King (0,4) gh
                          | c == Black = checkPiecePositions c King (7,4) gh
@@ -204,23 +221,19 @@ hasQueenSideRookMovedAlready :: Colour -> GameHistory -> Bool
 hasQueenSideRookMovedAlready c gh | c == White = checkPiecePositions c Rook (1,1) gh
                                   | c == Black = checkPiecePositions c Rook (1,8) gh
 
+-- Checks if any movement is present in game history
 checkPiecePositions :: Colour -> PieceType -> BoardPosition -> GameHistory -> Bool
 checkPiecePositions c pt p [] = False
 checkPiecePositions c pt p (x:xs) | (getPieceInPosition p b) /= (Just (Piece c pt)) = True
                                   | otherwise = checkPiecePositions c pt p xs
                                   where b = (snd x)
 
-{-checkKingPositions :: Colour -> BoardPosition -> GameHistory -> Bool
-checkKingPositions c p [] = False
-checkKingPositions c p (x:xs) | (getPieceInPosition p b) /= (Just (Piece c King)) = True
-                              | otherwise = checkKingPositions c p xs
-                              where b = (snd x)-}
-
+-- Checking for checks
 doesPositionResultInCheck :: BoardPosition -> BoardPosition -> Board -> Bool
 doesPositionResultInCheck kingP p b = kingP `elem` (generateLegalMoves p b)
 
 
-
+-- Castling validators
 canCastleKingSide :: Colour -> Board -> Bool
 canCastleKingSide White b = (isHorizontalPathClearBetweenPositions (1,5) (1,8) (1,5) b) && not (isUnderCheck (1,5) (1,6) b) && not (isUnderCheck (1,5) (1,7) b)
 canCastleKingSide Black b = (isHorizontalPathClearBetweenPositions (8,5) (8,8) (8,5) b) && not (isUnderCheck (8,5) (8,6) b) && not (isUnderCheck (8,5) (8,7) b)
@@ -257,6 +270,7 @@ castling False False True c b
                 where p1 = canCastleKingSide c b
                       p2 = canCastleQueenSide c b
 
+-- Movement helpers
 singleStraightMovements :: [BoardPosition]
 singleStraightMovements = [(1,0), (0,1), (0,-1), (-1,0)]
 
@@ -269,16 +283,10 @@ straightMovements = singleStraightMovements >>= \n -> [1..8] >>= \p -> return (p
 diagonalMovements :: [BoardPosition]
 diagonalMovements = singleDiagonalMovements >>= \n -> [1..8] >>= \p -> return (p * fst n, p * snd n)
 
+
+-- Movement validators
 isPathClearBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Bool
 isPathClearBetweenPositions p1 p2 b
-                {-| (x1 == x2) && (y1 < y2) = isHorizontalPathClearBetweenPositions (x1, y1+1) p2 (x1, y1+1) b
-                | (x1 == x2) && (y1 > y2) = isHorizontalPathClearBetweenPositions (x1, y1-1) p2 (x1, y1-1) b
-                | (y1 == y2) && (x1 < x2) = isVerticalPathClearBetweenPositions (x1+1, y1) p2 (x1+1, y1) b
-                | (y1 == y2) && (x1 > x2) = isVerticalPathClearBetweenPositions (x1-1, y1) p2 (x1-1, y1) b
-                | (x2 < x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1-1, y1-1) p2 (x1-1, y1-1) b
-                | (x2 < x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1-1, y1+1) p2 (x1-1, y1+1) b
-                | (x2 > x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1+1, y1-1) p2 (x1+1, y1-1) b
-                | (x2 > x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1+1, y1+1) p2 (x1+1, y1+1) b-}
                 | (x1 == x2) && (y1 < y2) = isHorizontalPathClearBetweenPositions p1 p2 p1 b
                 | (x1 == x2) && (y1 > y2) = isHorizontalPathClearBetweenPositions p1 p2 p1 b
                 | (y1 == y2) && (x1 < x2) = isVerticalPathClearBetweenPositions p1 p2 p1 b
@@ -343,6 +351,7 @@ isPathClear p1 p2 b
                 {-where piece1 = getPieceInPosition p1 b
                       piece2 = getPieceInPosition p2 b-}
 
+-- Get all possible movements for a specific piece from a given position
 getMovementsForPiece :: PieceType -> BoardPosition -> Board -> [BoardPosition]
 getMovementsForPiece p bp b = case p of
                                   Pawn   -> pawnMovements bp b
@@ -352,6 +361,7 @@ getMovementsForPiece p bp b = case p of
                                   Queen  -> queenMovements bp b
                                   King   -> kingMovements bp b
 
+-- Generate all movements for a specific piece from a position
 pawnMovements :: BoardPosition -> Board -> [BoardPosition]
 pawnMovements p b = filter (isPositionOnBoard) $ (moveForwardOnce p b) ++ (moveForwardTwice p b) ++ (moveDiagonallyOnceToTheRight p b) ++ (moveDiagonallyOnceToTheLeft p b)
 
@@ -370,11 +380,13 @@ queenMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1
 kingMovements :: BoardPosition -> Board -> [BoardPosition]
 kingMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1, p2) x b) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
 
+-- Validator
 isValidPosition :: BoardPosition -> Bool
 isValidPosition (p1, p2) = if(p1 < 1 || p1 > 8 || p2 < 1 || p2 > 8)
                            then False
                            else True
 
+-- Base functions used to manipulate the board
 updateBoard :: BoardPosition -> Maybe Piece -> [[Maybe Piece]] -> [[Maybe Piece]]
 updateBoard (p1,p2) e (x:xs)
     | u == 0 = updateRow v e x : xs
@@ -386,16 +398,6 @@ updateRow :: Int -> Maybe Piece -> [Maybe Piece] -> [Maybe Piece]
 updateRow 0 e (x:xs) = e:xs
 updateRow n e (x:xs) = x : updateRow (n-1) e xs
 updateRow _ _ [] = []
-
-{-updateBoard :: BoardPosition -> Maybe Piece -> [[Maybe Piece]] -> [[Maybe Piece]]
-updateBoard (p1,p2) e (x:xs)
-    | p1 == 0 = updateRow p2 e x : xs
-    | otherwise = x : updateBoard (p1-1,p2) e xs
-
-updateRow :: Int -> Maybe Piece -> [Maybe Piece] -> [Maybe Piece]
-updateRow 0 e (x:xs) = e:xs
-updateRow n e (x:xs) = x : updateRow (n-1) e xs
-updateRow _ _ [] = []-}
 
 updateBoardUsingPosition :: BoardPosition -> BoardPosition -> Board -> [[Maybe Piece]]
 updateBoardUsingPosition p1 p2 b = case (getPieceInPosition p1 b) of
@@ -412,6 +414,7 @@ removeFromBoardAtPosition p b = case (getPieceInPosition p b) of
                                 Nothing -> b
                                 Just _  -> updateBoard p Nothing b
 
+-- Piece checkers
 isPositionOccupiedByPiece :: PieceType -> BoardPosition -> Board -> Bool
 isPositionOccupiedByPiece p bp b = case (getPieceInPosition bp b) of
                                    Nothing          -> False
@@ -429,6 +432,7 @@ isPositionOccupiedByKing p1 b = case (getPieceInPosition p1 b) of
                                 Just (Piece _ King) -> True
                                 _                   -> False                               
 
+-- Actual movement between positions
 movePieceBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Board
 movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByWhitePiece p1 b)
                                      then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn White) b)
@@ -439,6 +443,7 @@ movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccu
                                      else b
                                      where v = fst p2
 
+-- Check validaity of moves for all pieces
 isValidMove :: BoardPosition -> BoardPosition -> Board -> Bool
 isValidMove p1 p2 b = case (getPieceInPosition p1 b) of
                           Nothing          -> False
@@ -457,6 +462,7 @@ isUnderCheck p1 p2 bp = case (getColourOfPieceInPosition p1 bp) of
                                         then False
                                         else True
 
+-- Retrieve all possible game states where checks are possible
 checkPositions :: Colour -> Board -> [BoardPosition]
 checkPositions c b = filter (\x -> doesPositionResultInCheck kingPosition x b) [positions | positions <- opponentPiecePositions]
                      where opponentPiecePositions = filter (\x -> not (isPositionEmpty x b) && isOccupiedByColour (opponent c) x b) [(u,v) | u <- [1..8], v <- [1..8]]
@@ -475,8 +481,6 @@ generateLegalMoves :: BoardPosition -> Board -> [BoardPosition]
 generateLegalMoves p b = case (getPieceInPosition p b) of
                              Nothing -> []
                              Just (Piece _ pi) -> getMovementsForPiece pi p b
-  {-getMovementsForPiece pi p b
-                         where pi = getPieceInPosition p-}
 
 generateMoves :: BoardPosition -> Board -> [Board]
 generateMoves (p1, p2) b = map (\x -> movePieceBetweenPositions (p1, p2) x b) ((generateBoardMoves b) !! (p1-1) !! (p2-1))
@@ -486,9 +490,11 @@ positionsWithColour c b =
                 filter (\x -> isOccupiedByColour c x b) listOfPositions
                 where listOfPositions = filter (\x -> not (isPositionEmpty x b)) [(i,j) | i <- [1..8], j<- [1..8]]
 
+-- Without castling and enpassant
 generateNextStates :: GameState -> [GameState]
 generateNextStates (colour, board) = [(opponent colour, board2) | positions <- positionsWithColour colour board, board2 <- generateMoves positions board]
 
+-- With all states (no stalemate)
 generateAllNextStates :: Game -> [GameState]
 generateAllNextStates (_, currentState, []) = generateNextStates currentState
 generateAllNextStates (_, currentState, history)
@@ -501,17 +507,33 @@ generateAllNextStates (_, currentState, history)
                       queenSideRookMoved = hasQueenSideRookMovedAlready currentTurn history
                       enPassantPossibility = isEnPassantMovePossible currentState (last history)
 
-{-getIndex :: IO Int -> Int
-getIndex b = do i <- b
-                return i
+-- Given a piece and a move, get its original position to check validity
+getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> BoardPosition
+getCurrentPositionBasedOnMove c (p, (x, y)) b = head $ filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
+                                                where ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
 
-getRandomNextState :: Game -> Int -> GameState
-getRandomNextState g i = (gameStates !! (getIndex index))
-                         where generator = mkStdGen i
-                               gameStates = generateAllNextStates g
-                               len = length gameStates
-                               index = randomRIO (0, len-1)-}
+-- Produce a move for the AI
+aiMakeMove :: Game -> GameState -> Game
+aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState])
+                        where aiColour = getAIColour g
+                              currentState = getGameState g
+                              hist = getGameHistory g
+                              colour = getCurrentColourFromGameState currentState
+                              newBoard = getCurrentBoardFromGameState newGameState
+                              newColour = opponent colour
 
+-- Produce a move for the player
+move :: Game -> BoardPosition -> BoardPosition -> Game
+move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
+                 where aiColour = getAIColour g
+                       currentState = getGameState g
+                       hist = getGameHistory g
+                       colour = getCurrentColourFromGameState currentState
+                       board = getCurrentBoardFromGameState currentState
+                       newBoard = movePieceBetweenPositions bp1 bp2 board
+                       newColour = opponent colour
+
+-- Get a random move
 getRandomNextState :: Game -> Int -> GameState
 getRandomNextState gs t =
     let gen = mkStdGen t
@@ -520,9 +542,11 @@ getRandomNextState gs t =
         (index, newgen) = randomR (0, size-1) gen :: (Int, StdGen)
     in (states!!index)
 
+-- Initial game state during start
 initialGameState :: GameState
 initialGameState = (White, initialBoard)
 
+-- Sample boards and states (currently used for testing)
 sampleBoard :: Board
 sampleBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Just(Piece White Bishop), Just(Piece White Knight), Just(Piece White Rook)],
                 [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
@@ -549,6 +573,7 @@ sampleBoard2 = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece Wh
                 [Just(Piece Black Pawn), Nothing, Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                 [Just(Piece Black Rook), Nothing, Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
+-- Initialization of games
 initializeWhiteAIGame :: Game
 initializeWhiteAIGame = (White, initialGameState, [])
 
