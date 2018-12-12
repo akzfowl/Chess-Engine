@@ -6,14 +6,13 @@ import Piece
 import Board
 import Parser
 import Text.Read
+import Minmax
 
 main :: IO()
-main = do putStrLn("Which side would you like?(W/B) Or E to exit.")
+main = do putStrLn("Which side would you like?(W/B) or E to exit.")
           c <- getLine
-          case readMaybe c of
-              Nothing -> do putStrLn "Please enter a valid option"
-                            main
-              Just co -> case co of
+          case c of
+              co -> case co of
                             "W" -> do putStrLn("You have chosen to play White")
                                       formattedDisplayBoard1 initialBoard
                                       runGame initializeBlackAIGame
@@ -35,7 +34,8 @@ runGame g     = do putStrLn("Current board:")
 
 aiMove :: Game -> IO()
 aiMove g = do putStrLn "The engine has made its move"
-              runGame (aiMakeMove g (getRandomNextState g 1))
+              {-runGame (aiMakeMove g (getRandomNextState g 1))-}
+              runGame (aiMakeMove g (retrieveNextState g))
            where b = getCurrentBoardFromGame g
                  c = getCurrentColourFromGame g
 

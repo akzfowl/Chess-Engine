@@ -99,8 +99,18 @@ initialBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece Wh
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
                 [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
-                [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
-                [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
+                [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Nothing, Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Nothing, Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
+
+checkBoard :: Board
+checkBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Just(Piece White Bishop), Just(Piece White Knight), Just(Piece White Rook)],
+              [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
+              [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+              [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+              [Nothing, Nothing, Nothing, Nothing, Just(Piece Black Queen), Nothing, Nothing , Nothing],
+              [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+              [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+              [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
 -- Empty board in case needed
 emptyBoard :: Board
@@ -333,6 +343,7 @@ isDiagonalPathClearBetweenPositions p1 p2 p3 b
                 | (x2 < x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1-1,y1+1) p2 p1 b
                 | (x2 > x1) && (y2 < y1) = isDiagonalPathClearBetweenPositions (x1+1,y1-1) p2 p1 b
                 | (x2 > x1) && (y2 > y1) = isDiagonalPathClearBetweenPositions (x1+1,y1+1) p2 p1 b
+                | otherwise              = False
                 where x1 = fst p1
                       x2 = fst p2
                       y1 = snd p1
@@ -461,6 +472,32 @@ isUnderCheck p1 p2 bp = case (getColourOfPieceInPosition p1 bp) of
                             Just c   -> if (null (checkPositions c (movePieceBetweenPositions p1 p2 bp)))
                                         then False
                                         else True
+
+getPositionOfColouredKing :: Colour -> Board -> BoardPosition 
+getPositionOfColouredKing c b = head (filter (\x -> isPositionOccupiedByPiece King x b) (getAllPositionsOfColourPieces c b))
+
+isCheck :: GameState -> Bool
+isCheck (c, b) = isKingUnderAttack (opponent c) (getPositionOfColouredKing c b) b
+
+isCheckMate :: GameState -> Bool
+isCheckMate (c, b) = (isKingUnderAttack (opponent c) p b) && (lKMoves == lKUnderAttack)
+                     where p = getPositionOfColouredKing c b
+                           kMoves = kingMovements p b
+                           lKMoves = length kMoves
+                           lKUnderAttack = length (filter (\x -> isKingUnderAttack (opponent c) x b) (kMoves))
+
+isKingUnderAttack :: Colour -> BoardPosition -> Board -> Bool
+isKingUnderAttack c bp b = if (isPieceAttackingPosition Pawn c bp b) || (isPieceAttackingPosition Rook c bp b) || (isPieceAttackingPosition Knight c bp b) || (isPieceAttackingPosition Bishop c bp b) || (isPieceAttackingPosition Queen c bp b)
+                         then True
+                         else False
+
+isPieceAttackingPosition :: PieceType -> Colour -> BoardPosition -> Board -> Bool
+isPieceAttackingPosition pt c bp b = if length (filter (\x -> isPathClear x bp b) (filter (\x -> isPositionOccupiedByPiece pt x b) (getAllPositionsOfColourPieces c b))) > 0
+                                     then True
+                                     else False
+
+getAllPositionsOfColourPieces :: Colour -> Board -> [BoardPosition]
+getAllPositionsOfColourPieces c b = filter (\x -> not (isPositionEmpty x b) && isOccupiedByColour c x b) [(u,v) | u <- [1..8], v <- [1..8]]
 
 -- Retrieve all possible game states where checks are possible
 checkPositions :: Colour -> Board -> [BoardPosition]
