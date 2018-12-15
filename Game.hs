@@ -7,6 +7,7 @@ import Board
 import Parser
 import Text.Read
 import Minmax
+import Move
 
 main :: IO()
 main = do putStrLn("Which side would you like?(W/B) or E to exit.")
@@ -42,18 +43,34 @@ aiMove g = do putStrLn "The engine has made its move"
 playerMove :: Game -> IO()
 playerMove g  = do putStrLn "Enter your move in standard notation"
                    m <- getLine
-                   case readMaybe m of
-                       Nothing -> do putStrLn "Please enter a valid move"
-                                     runGame g
-                       Just s  -> case oldPosition of
+                   case m of
+                       "" -> do putStrLn "Please enter a valid move"
+                                runGame g
+                       _  -> case (parseMove m) of
                                     Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                   runGame g
-                                    Just o -> do putStrLn "Move succesful"
-                                                 runGame newGame
-                                              where newGame = move g o newPosition
-                                  where b = getCurrentBoardFromGame g
-                                        c = getCurrentColourFromGame g
-                                        parserOutput = (parseMove s)
-                                        newPosition = snd parserOutput
-                                        pieceMoved = fst parserOutput
-                                        oldPosition = getCurrentPositionBasedOnMove c parserOutput b
+                                    Just KCastling -> if canCastleKingSide c b
+                                                      then runGame newGame
+                                                      else do putStrLn "Move unsuccessful. Please enter a valid move."
+                                                              runGame g
+                                                      where newGame = castleMove g KCastling
+                                    Just QCastling -> if canCastleQueenSide c b
+                                                      then runGame newGame
+                                                      else do putStrLn "Move unsuccessful. Please enter a valid move."
+                                                              runGame g
+                                                      where newGame = castleMove g QCastling
+                                    Just (Normal (pt, bp)) -> case oldPosition of
+                                                                Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
+                                                                              runGame g
+                                                                Just o -> do putStrLn "Move succesful"
+                                                                             runGame newGame
+                                                                          where newGame = move g o bp
+                                                              where b = getCurrentBoardFromGame g
+                                                                    c = getCurrentColourFromGame g
+                                                                    parserOutput = (parseMove m)
+                                                                    --newPosition = snd parserOutput
+                                                                    --pieceMoved = fst parserOutput
+                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp) b
+                                    where b = getCurrentBoardFromGame g
+                                          c = getCurrentColourFromGame g
+

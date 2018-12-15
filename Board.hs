@@ -575,6 +575,12 @@ move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
                        newBoard = movePieceBetweenPositions bp1 bp2 board
                        newColour = opponent colour
 
+
+
+
+
+
+
 -- Get a random move
 getRandomNextState :: Game -> Int -> GameState
 getRandomNextState gs t =
