@@ -45,13 +45,15 @@ playerMove g  = do putStrLn "Enter your move in standard notation"
                    case readMaybe m of
                        Nothing -> do putStrLn "Please enter a valid move"
                                      runGame g
-                       Just s  -> do putStrLn "Move succesful"
-                                     runGame newGame 
+                       Just s  -> case oldPosition of
+                                    Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
+                                                  runGame g
+                                    Just o -> do putStrLn "Move succesful"
+                                                 runGame newGame
+                                              where newGame = move g o newPosition
                                   where b = getCurrentBoardFromGame g
                                         c = getCurrentColourFromGame g
                                         parserOutput = (parseMove s)
                                         newPosition = snd parserOutput
                                         pieceMoved = fst parserOutput
                                         oldPosition = getCurrentPositionBasedOnMove c parserOutput b
-                                        newGame = move g oldPosition newPosition
-                                        newBoard = getCurrentBoardFromGame newGame
