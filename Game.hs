@@ -40,13 +40,29 @@ aiMove g = do putStrLn "The engine has made its move"
            where b = getCurrentBoardFromGame g
                  c = getCurrentColourFromGame g
 
+
+runGameFromFile :: String -> IO()
+runGameFromFile f = do l <- parseFile f
+                       case sequence l of
+                            Just l' -> runLoop l' initializeBlackAIGame
+                            Nothing -> putStrLn "Invalid syntax found in the current file."
+
+
+runLoop :: [Move] -> Game -> IO()
+runLoop [] g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
+                  putStrLn "Finished parsing the file"
+runLoop (m:ms) g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
+                      playerAltMove g (m:ms)
+
+
+
 playerMove :: Game -> IO()
 playerMove g  = do putStrLn "Enter your move in standard notation"
                    m <- getLine
                    case m of
                        "" -> do putStrLn "Please enter a valid move"
                                 runGame g
-                       _  -> case (parseMove m) of
+                       _  -> case (parseAlternate m) of
                                     Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                   runGame g
                                     Just KCastling -> if canCastleKingSide c b
@@ -59,7 +75,7 @@ playerMove g  = do putStrLn "Enter your move in standard notation"
                                                       else do putStrLn "Move unsuccessful. Please enter a valid move."
                                                               runGame g
                                                       where newGame = castleMove g QCastling
-                                    Just (Normal (pt, bp)) -> case oldPosition of
+                                    Just (Normal (pt, bp, oc)) -> case oldPosition of
                                                                 Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                               runGame g
                                                                 Just o -> do putStrLn "Move succesful"
@@ -70,7 +86,35 @@ playerMove g  = do putStrLn "Enter your move in standard notation"
                                                                     parserOutput = (parseMove m)
                                                                     --newPosition = snd parserOutput
                                                                     --pieceMoved = fst parserOutput
-                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp) b
+                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
                                     where b = getCurrentBoardFromGame g
                                           c = getCurrentColourFromGame g
 
+playerAltMove :: Game -> [Move] -> IO()
+playerAltMove g (m:ms) = case m of
+                             KCastling -> if canCastleKingSide c b
+                                          then runLoop ms newGame
+                                          else do putStrLn "Invalid move1. Incorrect syntax"
+                                          where newGame = castleMove g KCastling
+                             QCastling -> if canCastleQueenSide c b
+                                          then runLoop ms newGame
+                                          else do putStrLn "Invalid move2. Incorrect syntax"
+                                          where newGame = castleMove g QCastling
+                             Normal (pt, bp, oc) -> do putStrLn $ show c
+                                                       putStrLn $ show bp
+                                                       putStrLn $ show pt
+                                                       putStrLn $ show b
+                                                       putStrLn $ show g
+                                                       case oldPosition of
+                                                         Nothing -> do putStrLn "Invalid move3. Incorrect syntax"
+                                                         Just o -> do putStrLn "Move succesful"
+                                                                      runLoop ms newGame
+                                                                   where newGame = move g o bp
+                                                    where b = getCurrentBoardFromGame g
+                                                          c = getCurrentColourFromGame g
+                                                          --parserOutput = (parseMove m)
+                                                        --newPosition = snd parserOutput
+                                                        --pieceMoved = fst parserOutput
+                                                          oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
+                            where b = getCurrentBoardFromGame g
+                                  c = getCurrentColourFromGame g

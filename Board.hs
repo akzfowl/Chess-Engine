@@ -546,13 +546,21 @@ generateAllNextStates (_, currentState, history)
                       enPassantPossibility = isEnPassantMovePossible currentState (last history)
 
 -- Given a piece and a move, get its original position to check validity
-getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> Maybe BoardPosition
-getCurrentPositionBasedOnMove c (p, (x, y)) b = if null anyMoves
-                                                then Nothing
-                                                else Just (head anyMoves)
-                                                where
-                                                    anyMoves = filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
-                                                    ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
+getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int), Maybe Int) -> Board -> Maybe BoardPosition
+getCurrentPositionBasedOnMove c (p, (x, y), col) b = if null anyMoves
+                                                     then Nothing
+                                                     else if (length anyMoves) > 1
+                                                          then case col of
+                                                                Nothing -> Just (head anyMoves)
+                                                                Just col' -> if (snd $ head anyMoves) == col'
+                                                                             then Just (head anyMoves)
+                                                                             else if (snd $ head (tail anyMoves)) == col'
+                                                                                  then Just (head (tail anyMoves))
+                                                                                  else Nothing
+                                                          else Just (head anyMoves)
+                                                        where
+                                                            anyMoves = filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
+                                                            ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
 
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
