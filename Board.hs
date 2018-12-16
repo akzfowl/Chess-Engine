@@ -168,6 +168,36 @@ checkmateBoard2 = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece
                   [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece White Queen), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                   [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Rook), Nothing]]
 
+kingCannotCaptureBoard :: Board
+kingCannotCaptureBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Nothing, Nothing, Just(Piece White Rook)],
+                  [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Just(Piece Black Knight), Just(Piece White Pawn), Just(Piece White Pawn)],
+                  [Nothing, Nothing, Nothing, Nothing, Just(Piece White Pawn), Just(Piece White Knight), Nothing , Nothing],
+                  [Nothing, Nothing, Just(Piece White Bishop), Nothing, Nothing, Nothing, Nothing , Just(Piece Black Queen)],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                  [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Nothing, Just(Piece Black King), Just(Piece Black Bishop), Nothing, Just(Piece Black Rook)]]
+
+kingCanCaptureBoard :: Board
+kingCanCaptureBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Nothing, Nothing, Just(Piece White Rook)],
+                  [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Just(Piece Black Knight), Just(Piece White Pawn), Just(Piece White Pawn)],
+                  [Nothing, Nothing, Nothing, Nothing, Just(Piece White Pawn), Just(Piece White Knight), Nothing , Nothing],
+                  [Nothing, Nothing, Just(Piece White Bishop), Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                  [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Nothing, Just(Piece Black Rook)]]
+
+kingCanCaptureWithThreatBoard :: Board
+kingCanCaptureWithThreatBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Just(Piece White Queen), Just(Piece White King), Nothing, Nothing, Just(Piece White Rook)],
+                  [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Just(Piece Black Knight), Just(Piece White Pawn), Just(Piece White Pawn)],
+                  [Nothing, Nothing, Nothing, Nothing, Just(Piece White Pawn), Just(Piece White Knight), Nothing , Nothing],
+                  [Nothing, Nothing, Just(Piece Black Queen), Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                  [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Nothing, Just(Piece Black Rook)]]
+
 -- Empty board in case needed
 emptyBoard :: Board
 emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
@@ -418,14 +448,17 @@ haveOppositeColours (Piece c1 _) (Piece c2 _) = if c1 == c2
 
 isPathClear :: BoardPosition -> BoardPosition -> Board -> Bool
 isPathClear p1 p2 b
-      | (isPositionEmpty p2 b) == True = isPathClearBetweenPositions p1 p2 b
+      | (isPositionEmpty p2 b) == True && (not (isPositionOccupiedByPiece King p1 b)) = isPathClearBetweenPositions p1 p2 b
+      | (isPositionEmpty p2 b) == True && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just White) && not (isPieceUnderAttack Black p2 interimBoard) = isPathClearBetweenPositions p1 p2 b
+      | (isPositionEmpty p2 b) == True && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just Black) && not (isPieceUnderAttack White p2 interimBoard) = isPathClearBetweenPositions p1 p2 b
       | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (not (isPositionOccupiedByPiece King p1 b)) = isPathClearBetweenPositions p1 p2 b 
-      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just White) && (isPieceUnderAttack Black p2 b) = isPathClearBetweenPositions p1 p2 b
-      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just Black) && (isPieceUnderAttack White p2 b) = isPathClearBetweenPositions p1 p2 b
+      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just White) && not (isPieceUnderAttack Black p2 interimBoard) = isPathClearBetweenPositions p1 p2 b
+      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just Black) && not (isPieceUnderAttack White p2 interimBoard) = isPathClearBetweenPositions p1 p2 b
       | ((isPositionEmpty p2 b) == False) && not (hasOppositePlayerPiece p1 p2 b) = False
       | otherwise = False
-      {-where piece1 = getPieceInPosition p1 b
-            piece2 = getPieceInPosition p2 b-}
+      where interimBoard = moveUnsafe p1 p2 b
+
+
 
 -- Get all possible movements for a specific piece from a given position
 getMovementsForPiece :: PieceType -> BoardPosition -> Board -> [BoardPosition]
@@ -518,6 +551,9 @@ movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccu
                                                then removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
                                                else b
                                      where v = fst p2
+
+moveUnsafe :: BoardPosition -> BoardPosition -> Board -> Board
+moveUnsafe p1 p2 b =  removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
 
 -- Check validaity of moves for all pieces
 isValidMove :: BoardPosition -> BoardPosition -> Board -> Bool
@@ -766,3 +802,9 @@ initializeBlackAIGame = (Black, initialGameState, [])
 
 initializeAILessGame :: Game
 initializeAILessGame = (White, initialGameState, [])
+
+rookCount :: Colour -> Board -> Int
+rookCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositionOccupiedByPiece Rook x b)) [(u,v) | u <- [1..8], v <- [1..8]]
+
+bishopCount :: Colour -> Board -> Int
+bishopCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositionOccupiedByPiece Bishop x b)) [(u,v) | u <- [1..8], v <- [1..8]]
