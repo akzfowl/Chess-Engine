@@ -23,6 +23,11 @@ displaySquare :: Square -> String
 displaySquare Nothing = "  --   "
 displaySquare (Just p) = "  " ++ show p ++ "    "
 
+formattedDisplayBoardUsingColour :: Colour -> Board -> IO()
+formattedDisplayBoardUsingColour c b = case c of
+                                           White -> formattedDisplayBoard1 b
+                                           Black -> formattedDisplayBoard2 b
+
 -- Show white bottom
 -- White is always at the top, so use reverse on the board
 formattedDisplayBoard1 :: Board -> IO()
@@ -153,6 +158,16 @@ checkmateBoard = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece 
                   [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                   [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Knight), Just(Piece Black Rook)]]
 
+checkmateBoard2 :: Board
+checkmateBoard2 = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece White Bishop), Nothing, Just(Piece White King), Nothing, Just(Piece White Knight), Just(Piece White Rook)],
+                  [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn)],
+                  [Nothing, Nothing, Nothing, Nothing, Just(Piece White Pawn), Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Just(Piece White Bishop), Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece White Queen), Just(Piece Black Pawn), Just(Piece Black Pawn)],
+                  [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Just(Piece Black Rook), Nothing]]
+
 -- Empty board in case needed
 emptyBoard :: Board
 emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
@@ -225,7 +240,7 @@ moveForwardOnce (p1, p2) b | isOccupiedByWhitePiece (p1, p2) b && (isPositionEmp
 
 moveForwardTwice :: BoardPosition -> Board -> [BoardPosition]
 moveForwardTwice (p1, p2) b | isOccupiedByWhitePiece (p1, p2) b && (isPositionEmpty (p1+2, p2) b) && (isPositionEmpty (p1+1, p2) b) && p1 == 2 = [(p1+2, p2)]
-                            | isOccupiedByBlackPiece (p1, p2) b && (isPositionEmpty (p1-2, p2) b) && (isPositionEmpty (p1-1, p2) b) && p2 == 7 = [(p1-2, p2)]
+                            | isOccupiedByBlackPiece (p1, p2) b && (isPositionEmpty (p1-2, p2) b) && (isPositionEmpty (p1-1, p2) b) && p1 == 7 = [(p1-2, p2)]
                             | otherwise = []
 
 moveDiagonallyOnceToTheLeft :: BoardPosition -> Board -> [BoardPosition]
@@ -403,11 +418,14 @@ haveOppositeColours (Piece c1 _) (Piece c2 _) = if c1 == c2
 
 isPathClear :: BoardPosition -> BoardPosition -> Board -> Bool
 isPathClear p1 p2 b
-                | (isPositionEmpty p2 b) == True = isPathClearBetweenPositions p1 p2 b
-                | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) = isPathClearBetweenPositions p1 p2 b
-                | ((isPositionEmpty p2 b) == False) && not (hasOppositePlayerPiece p1 p2 b) = False
-                {-where piece1 = getPieceInPosition p1 b
-                      piece2 = getPieceInPosition p2 b-}
+      | (isPositionEmpty p2 b) == True = isPathClearBetweenPositions p1 p2 b
+      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (not (isPositionOccupiedByPiece King p1 b)) = isPathClearBetweenPositions p1 p2 b 
+      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just White) && (isPieceUnderAttack Black p2 b) = isPathClearBetweenPositions p1 p2 b
+      | ((isPositionEmpty p2 b) == False) && (hasOppositePlayerPiece p1 p2 b) && (isPositionOccupiedByPiece King p1 b) && ((getColourOfPieceInPosition p1 b) == Just Black) && (isPieceUnderAttack White p2 b) = isPathClearBetweenPositions p1 p2 b
+      | ((isPositionEmpty p2 b) == False) && not (hasOppositePlayerPiece p1 p2 b) = False
+      | otherwise = False
+      {-where piece1 = getPieceInPosition p1 b
+            piece2 = getPieceInPosition p2 b-}
 
 -- Get all possible movements for a specific piece from a given position
 getMovementsForPiece :: PieceType -> BoardPosition -> Board -> [BoardPosition]
@@ -492,9 +510,9 @@ isPositionOccupiedByKing p1 b = case (getPieceInPosition p1 b) of
 
 -- Actual movement between positions
 movePieceBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Board
-movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByWhitePiece p1 b)
+movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && (v == 8) && (isOccupiedByWhitePiece p1 b)
                                      then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn White) b)
-                                     else if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByBlackPiece p1 b)
+                                     else if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && (v == 1) && (isOccupiedByBlackPiece p1 b)
                                           then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn Black) b)
                                           else if (isValidMove p1 p2 b)
                                                then removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
@@ -534,7 +552,7 @@ canBeIntercepted c bp b = if snd attackInfo == Knight
                                 kingPosition = getPositionOfColouredKing c b
                                 attackerPosition = fst attackInfo
                                 allInterimPositions =  getAllPositionsBetweenPositions kingPosition attackerPosition
-                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) b
+                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) (removeFromBoardAtPosition (attackerPosition) b)
                                 ownPiecePositions p = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
                                 ownPieceMoves = concat (concat (generateBoardMovesForColour b c))
                                 blockerMoves = intersect allInterimPositions ownPieceMoves
@@ -741,3 +759,6 @@ initializeWhiteAIGame = (White, initialGameState, [])
 
 initializeBlackAIGame :: Game
 initializeBlackAIGame = (Black, initialGameState, [])
+
+initializeAILessGame :: Game
+initializeAILessGame = (White, initialGameState, [])
