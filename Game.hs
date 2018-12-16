@@ -122,12 +122,13 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                       Just (Normal (pt, bp)) -> case oldPosition of
                                                                               Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                                             runGame g
-                                                                              Just o ->  if isChecked && isCheck (getGameState newGame)
+                                                                              Just o ->  if isChecked && isCheck (getGameState checkGame)
                                                                                          then do putStrLn "That move still leaves you in Check. Please enter a valid move."
                                                                                                  runGame g
                                                                                          else do putStrLn "Move succesful"
                                                                                                  runGame newGame
                                                                                     where newGame = move g o bp
+                                                                                          checkGame = movePostCheck g o bp
                                                                               where b = getCurrentBoardFromGame g
                                                                                     c = getCurrentColourFromGame g
                                                                                     parserOutput = (parseMove m)

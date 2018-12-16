@@ -707,11 +707,15 @@ move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
                        newBoard = movePieceBetweenPositions bp1 bp2 board
                        newColour = opponent colour
 
-
-
-
-
-
+movePostCheck :: Game -> BoardPosition -> BoardPosition -> Game
+movePostCheck g bp1 bp2 = (aiColour, (colour, newBoard), hist ++ [currentState])
+                        where aiColour = getAIColour g
+                              currentState = getGameState g
+                              hist = getGameHistory g
+                              colour = getCurrentColourFromGameState currentState
+                              board = getCurrentBoardFromGameState currentState
+                              newBoard = movePieceBetweenPositions bp1 bp2 board
+                              newColour = opponent colour
 
 -- Get a random move
 getRandomNextState :: Game -> Int -> GameState
