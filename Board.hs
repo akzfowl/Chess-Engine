@@ -24,6 +24,7 @@ displaySquare Nothing = "  --   "
 displaySquare (Just p) = "  " ++ show p ++ "    "
 
 -- Show white bottom
+-- White is always at the top, so use reverse on the board
 formattedDisplayBoard1 :: Board -> IO()
 formattedDisplayBoard1 b = putStrLn (unlines ((border : boardStr) ++ [border, bottom]))
                            where boardStr = zipWith showLine (reverse [1..8]) $ reverse b
@@ -494,10 +495,10 @@ movePieceBetweenPositions :: BoardPosition -> BoardPosition -> Board -> Board
 movePieceBetweenPositions p1 p2 b =  if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByWhitePiece p1 b)
                                      then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn White) b)
                                      else if (isValidMove p1 p2 b) && (isPositionOccupiedByPawn p1 b) && ((v == 0) || (v == 7)) && (isOccupiedByBlackPiece p1 b)
-                                     then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn Black) b)
-                                     else if (isValidMove p1 p2 b)
-                                     then removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
-                                     else b
+                                          then removeFromBoardAtPosition p1 (updateBoardUsingPositionAndPiece p1 p2 (promotePawn Black) b)
+                                          else if (isValidMove p1 p2 b)
+                                               then removeFromBoardAtPosition p1 (updateBoardUsingPosition p1 p2 b)
+                                               else b
                                      where v = fst p2
 
 -- Check validaity of moves for all pieces
@@ -659,9 +660,13 @@ generateAllNextStates (_, currentState, history)
                       enPassantPossibility = isEnPassantMovePossible currentState (last history)
 
 -- Given a piece and a move, get its original position to check validity
-getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> BoardPosition
-getCurrentPositionBasedOnMove c (p, (x, y)) b = head $ filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
-                                                where ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
+getCurrentPositionBasedOnMove :: Colour -> (PieceType, (Int,Int)) -> Board -> Maybe BoardPosition
+getCurrentPositionBasedOnMove c (p, (x, y)) b = if null anyMoves
+                                                then Nothing
+                                                else Just (head anyMoves)
+                                                where
+                                                    anyMoves = filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
+                                                    ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
 
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
@@ -683,6 +688,12 @@ move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
                        board = getCurrentBoardFromGameState currentState
                        newBoard = movePieceBetweenPositions bp1 bp2 board
                        newColour = opponent colour
+
+
+
+
+
+
 
 -- Get a random move
 getRandomNextState :: Game -> Int -> GameState
