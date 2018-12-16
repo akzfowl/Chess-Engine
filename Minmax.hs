@@ -3,6 +3,7 @@ module Minmax where
 import Board
 import Piece
 import Colour
+import PieceType
 
 data GameTree = GameTree {state::GameState, children::[GameTree]}
 
@@ -44,10 +45,37 @@ winningState White gs = evaluateState gs > threshold
 winningState Black gs = evaluateState gs < (-threshold)
 
 evaluateState :: GameState -> Int
-evaluateState gs = evaluateBoard (snd gs)
+evaluateState gs = totalEval (snd gs)
 
 evaluateBoard :: Board -> Int
-evaluateBoard b = let (p1, p2) = getTotalValueOfPlayers b in (p1 - p2)
+evaluateBoard b = let (pointsWhite, pointsBlack) = boardPieceEvaluator b in (pointsWhite - pointsBlack)
+
+boardPieceEvaluator :: Board -> (Int,Int)
+boardPieceEvaluator b = foldl addPieceValue (0,0) (concat b)
+                        where addPieceValue pts Nothing = pts
+                              addPieceValue (pointsWhite, pointsBlack) (Just (Piece c pt)) | c == White = (pointsWhite + pointValue pt, pointsBlack)
+                                                                                           | otherwise = (pointsWhite, pointsBlack + pointValue pt)
+
+centralSquares :: [BoardPosition]
+centralSquares = [(4,4), (4,5), (5,4), (5,5)]
+
+centralControlEvaluator :: Board -> Int
+centralControlEvaluator b = (p1-p2)
+                            where (p1,p2) = foldl (\x acc -> if isOccupiedByColour White x b then (fst acc +1, snd acc) else if isOccupiedByColour Black x b then (fst acc, snd acc+1) else acc) (0,0) centralSquares
+
+evaluationWeights :: [Int]
+evaluationWeights = [10, 2]
+
+weightApplication :: [Int] -> [Int] -> Int
+weightApplication [] _ = 0
+weightApplication _ [] = 0
+weightApplication (x:xs) (y:ys) = (x*y) + (weightApplication xs ys)
+
+applyWeights :: [Int] -> Int
+applyWeights criteria = weightApplication criteria evaluationWeights
+
+totalEval :: Board -> Int
+totalEval b = applyWeights [(evaluateBoard b),(centralControlEvaluator b)]
 
 threshold :: Int
 threshold = 400
