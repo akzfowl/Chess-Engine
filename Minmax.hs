@@ -45,7 +45,7 @@ winningState White gs = evaluateState gs > threshold
 winningState Black gs = evaluateState gs < (-threshold)
 
 evaluateState :: GameState -> Int
-evaluateState gs = totalEval (snd gs)
+evaluateState gs = totalEval gs
 
 evaluateBoard :: Board -> Int
 evaluateBoard b = let (pointsWhite, pointsBlack) = boardPieceEvaluator b in (pointsWhite - pointsBlack)
@@ -64,18 +64,31 @@ centralControlEvaluator b = (p1-p2)
                             where (p1,p2) = foldl (\x acc -> if isOccupiedByColour White x b then (fst acc +1, snd acc) else if isOccupiedByColour Black x b then (fst acc, snd acc+1) else acc) (0,0) centralSquares
 
 evaluationWeights :: [Int]
-evaluationWeights = [10, 2]
+evaluationWeights = [10, 2, 1, 2]
 
 weightApplication :: [Int] -> [Int] -> Int
 weightApplication [] _ = 0
 weightApplication _ [] = 0
 weightApplication (x:xs) (y:ys) = (x*y) + (weightApplication xs ys)
 
+{-evaluateMobility :: Game -> Int
+evaluateMobility g = (length $ generateAllNextStates g) - (length $ generateAllNextStates g)-}
+
+bishopBonus :: Board -> Int
+bishopBonus b = (p1-p2)
+                where (p1, p2) = (bishopCount White b, bishopCount Black b)
+
+rookBonus :: Board -> Int
+rookBonus b = (p1-p2)
+              where (p1, p2) = (rookCount White b, rookCount Black b)
+
 applyWeights :: [Int] -> Int
 applyWeights criteria = weightApplication criteria evaluationWeights
 
-totalEval :: Board -> Int
-totalEval b = applyWeights [(evaluateBoard b),(centralControlEvaluator b)]
+totalEval :: GameState -> Int
+totalEval gs = applyWeights [(evaluateBoard b), (centralControlEvaluator b), (bishopBonus b), (rookBonus b)]
+               where b = getCurrentBoardFromGameState gs
+                     g = (White, gs, [])
 
 threshold :: Int
 threshold = 400
