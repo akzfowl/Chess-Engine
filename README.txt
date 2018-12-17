@@ -2,7 +2,6 @@ Project Title: Chess AI with an interface for user play
 
 Group Members: Akshay Sharma (acs1246), Akshay Kalbhor (abk7766)
 
-
 Current functionality:
 
 1) Ability to display the board
@@ -11,7 +10,7 @@ Current functionality:
 4) Gives the player the choice to save the game at any point.
 5) Gives the player the choice initially to load a previously saved game.
 6) Takes in input from the player in standard chess notation (Ex: "Nf3", "a3", "Qc2", "axb3", "Qxd4", "O-O", "O-O-O", "Kd3" etc).
-7) Has the ability to read and replay (the cleaned up version) of an olf game.
+7) Has the ability to read and replay (the cleaned up version) of an old game.
 8) Moves the pieces as required after parsing. 
 9) Contains 2 AIs presently but need to be switched manually in order to play against each.
    a) The random AI just generates a random move each time.
@@ -21,7 +20,19 @@ Current functionality:
 
 In order to run the project: Navigate to the folder with the project files and load/run the Game file. (On ghci, run the main function). 
 When saving or loading files, they are automatically saved or loaded from the ChessGames directory which needs to be present in the given
-directory strcuture currently.
+directory strcuture currently. 
+
+Old game files are located in the ChessGames folder.
+Saved game files are in the SavedGames folder.
+
+In order to load an old game (a game that has already been played to its conclusion) to test that it works.
+It will automatically be picked up form the ChessGames folder of the current directory:
+runGameFromFile {filePath}
+
+When attempting to save a game, it will be saved to the SavedGames directory in the current location.
+When attempting to load a game, it will be looked for in the SavedGames directory in the current location.
+
+This will play through all the moves in the game upto its conclusion as long as all the moves are legal.
 
 Structure of the Code:
 
@@ -83,4 +94,19 @@ Apart from these, other suggestions for people doing similar projects:
 
 1) Look into Bitboards for efficient board representation.
 2) Look into Maps instead of lists of lists for the boards.
-3) 
+
+Work done in the project:
+
+A majority of the time before the mid-point was spent figuring out ways to model the game, the board, the pieces and the movements of the pieces.
+Programming the game mechanics, verifying them and fixing any errors found was without doubt the most time consuming part of the project because
+we needed to wait until games were actually playable in order to be able to test them properly. A lot of effort also had to be put into 
+verifying that the minimax AI worked fine since there was no special way to check if it was working significantly better than the randomAI for a time.
+We also needed to put special focus into the game notation in order to be able to parse old game files, be able to save and load games properly.
+
+Ideas for chess board representation, evaluation and notation were taken from:
+1) Wikipedia - https://en.wikipedia.org/wiki/Portable_Game_Notation
+               https://en.wikipedia.org/wiki/Algebraic_notation_(chess)
+               https://en.wikipedia.org/wiki/Descriptive_notation
+               https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
+               https://en.wikipedia.org/wiki/Board_representation_(chess)
+2) The Chess programming wiki (https://www.chessprogramming.org) was invaluable in providing ideas and guidelines for representation and evaluation.
