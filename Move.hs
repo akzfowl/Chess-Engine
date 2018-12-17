@@ -4,7 +4,7 @@ import PieceType
 import Board
 import Colour
 
-data Move = Normal (PieceType, BoardPosition, Maybe Int) | KCastling | QCastling deriving (Eq,Show)
+data Move = Normal (PieceType, BoardPosition, Maybe Int) | KCastling | QCastling | Save deriving (Eq,Show)
 
 
 castleMove :: Game -> Move -> Game

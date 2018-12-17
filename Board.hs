@@ -75,16 +75,16 @@ getCurrentBoardFromGameState (_, b) = b
 
 
 -- Position convertors (currently not used)
-boardToHumanReadable :: BoardPosition -> HumanReadablePosition
-boardToHumanReadable (p1, p2) = case p1 of
-    1 -> ('a',p2)
-    2 -> ('b',p2)
-    3 -> ('c',p2)
-    4 -> ('d',p2)
-    5 -> ('e',p2)
-    6 -> ('f',p2)
-    7 -> ('g',p2)
-    8 -> ('h',p2)
+boardToHumanReadable :: BoardPosition -> String
+boardToHumanReadable (p1, p2) = case p2 of
+                                    1 -> 'a' : (show p1)
+                                    2 -> 'b' : (show p1)
+                                    3 -> 'c' : (show p1)
+                                    4 -> 'd' : (show p1)
+                                    5 -> 'e' : (show p1)
+                                    6 -> 'f' : (show p1)
+                                    7 -> 'g' : (show p1)
+                                    8 -> 'h' : (show p1)
 
 humanReadableToBoard :: HumanReadablePosition -> BoardPosition
 humanReadableToBoard (p1, p2) = case p1 of
@@ -816,3 +816,29 @@ rookCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPosition
 
 bishopCount :: Colour -> Board -> Int
 bishopCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositionOccupiedByPiece Bishop x b)) [(u,v) | u <- [1..8], v <- [1..8]]
+
+
+
+displayMoveInNotation :: (PieceType, BoardPosition) -> IO()
+displayMoveInNotation (pt, bp) = if pt == Pawn
+                                 then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
+                                 else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
+
+
+diffStatesToGetMove :: GameState -> GameState -> (PieceType, BoardPosition)
+diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
+                                        Nothing -> (Pawn, (0,0))
+                                        Just Pawn -> (Pawn, move)
+                                        Just Rook -> (Rook, move)
+                                        Just Knight -> (Knight, move)
+                                        Just Bishop -> (Bishop, move)
+                                        Just Queen -> (Queen, move)
+                                        Just King -> (King, move)
+                                        where   b1 = getCurrentBoardFromGameState gs1
+                                                b2 = getCurrentBoardFromGameState gs2
+                                                c1 = getCurrentColourFromGameState gs1
+                                                c2 = getCurrentColourFromGameState gs2
+                                                p1 = positionsWithColour c1 b1
+                                                p2 = positionsWithColour c2 b2
+                                                diffMove = (p2 \\ p1)
+                                                move = head diffMove
