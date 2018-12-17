@@ -8,30 +8,48 @@ import Parser
 import Text.Read
 import Minmax
 import Move
+import System.Directory
 
 main :: IO()
-main = do putStrLn("What would you like to play? 1 for Player vs Machine or 2 for Player vs Player (or 3 for machine vs machine!)")
-          ch <- getLine
-          case ch of
-              ""  -> do putStrLn "Please enter a valid choice."
-                        main
-              "1" -> do putStrLn("Which side would you like?(W/B) or E to exit.")
-                        c <- getLine
-                        case c of
-                              co -> case co of
-                                          "W" -> do putStrLn("You have chosen to play White")
-                                                    runGame initializeBlackAIGame
-                                          "B" -> do putStrLn("You have chosen to play Black")
-                                                    runGame initializeWhiteAIGame
-                                          "E" -> putStrLn("Thanks for playing!")
-                                          _   -> do putStrLn("Please enter a valid option")
-                                                    main
-              "2" -> do putStrLn("White plays first!")
-                        runManualGame initializeAILessGame
-              "3" -> do putStrLn("White plays first!")
-                        runAIGame initializeAILessGame
-              _   -> do putStrLn "Please enter a valid choice."
-                        main
+main = do putStrLn("Would you like to start a new game or load an old one? N = new game, L = load old game.")
+          ans <- getLine
+          case ans of
+            "L" -> do putStrLn("Enter the name of the file")
+                      fileName <- getLine
+                      --putStrLn "This functionality has not been implemented yet. Please check back at a later date"
+                      --putStrLn "-----------------------------------------------------------------------------------"
+                      x <- doesFileExist fileName
+                      if x == True
+                      then loadGameFromFile fileName
+                      else putStrLn "File does not exist at the given path"
+                      main
+            "N" -> do putStrLn("What would you like to play? 1 for Player vs Machine or 2 for Player vs Player (or 3 for machine vs machine!)")
+                      ch <- getLine
+                      case ch of
+                          ""  -> do putStrLn "Please enter a valid choice."
+                                    putStrLn "----------------------------"
+                                    main
+                          "1" -> do putStrLn("Which side would you like?(W/B) or E to exit.")
+                                    c <- getLine
+                                    case c of
+                                          co -> case co of
+                                                      "W" -> do putStrLn("You have chosen to play White")
+                                                                runGame initializeBlackAIGame
+                                                      "B" -> do putStrLn("You have chosen to play Black")
+                                                                runGame initializeWhiteAIGame
+                                                      "E" -> putStrLn("Thanks for playing!")
+                                                      _   -> do putStrLn("Please enter a valid option")
+                                                                main
+                          "2" -> do putStrLn("White plays first!")
+                                    runManualGame initializeAILessGame
+                          "3" -> do putStrLn("White plays first!")
+                                    runAIGame initializeAILessGame
+                          _   -> do putStrLn "Please enter a valid choice."
+                                    main
+            _ -> do putStrLn "Please enter a valid choice"
+                    putStrLn "---------------------------"
+                    main
+
 
 runManualGame :: Game -> IO()
 runManualGame g  = do putStrLn("Current board:")
@@ -97,6 +115,37 @@ aiMove g = do putStrLn "The engine has made its move"
                  current = getGameState g
                  nextNew = (c, getCurrentBoardFromGameState next)
 
+runGameFromFile :: String -> IO()
+runGameFromFile f = do l <- parseFile f
+                       case sequence l of
+                            Just l' -> runLoop l' initializeBlackAIGame
+                            Nothing -> putStrLn "Invalid syntax found in the current file."
+
+
+loadGameFromFile :: String -> IO()
+loadGameFromFile f = do l <- parseFile f
+                        case sequence l of
+                            Just l' -> if ((length l') `mod` 2) == 0
+                                       then runLoopForLoadedGame l' initializeBlackAIGame
+                                       else runLoopForLoadedGame l' initializeWhiteAIGame
+                            Nothing -> putStrLn "Invalid syntax found in the current file."
+
+runLoop :: [Move] -> Game -> IO()
+runLoop [] g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
+                  putStrLn "Finished parsing the file"
+runLoop (m:ms) g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
+                      playerAltMove g (m:ms)
+
+
+runLoopForLoadedGame :: [Move] -> Game -> IO()
+runLoopForLoadedGame [] g = do putStrLn "The game has loaded successfully."
+                               runGame g
+runLoopForLoadedGame (m:ms) g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
+                                   playerAltMoveLoaded g (m:ms)
+
+
+
+
 aiMoveAlt :: Game -> IO()
 aiMoveAlt g = do putStrLn "The engine has made its move"
                  {-runAIGame (aiMakeMove g (getRandomNextState g 1))-}
@@ -110,8 +159,8 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                               case m of
                                     "" -> do putStrLn "Please enter a valid move"
                                              runGame g
-                                    _  -> case (parseMove m) of
-                                                      Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
+                                    _  -> case (parseAlternate m) of
+                                                      Nothing -> do putStrLn "Invalid move structure!."
                                                                     runGame g
                                                       Just KCastling -> if canCastleKingSide c b
                                                                         then runGame newGame
@@ -123,7 +172,7 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                         else do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                                 runGame g
                                                                         where newGame = castleMove g QCastling
-                                                      Just (Normal (pt, bp)) -> case oldPosition of
+                                                      Just (Normal (pt, bp, oc)) -> case oldPosition of
                                                                               Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                                             runGame g
                                                                               Just o ->  if isChecked && isCheck (getGameState checkGame)
@@ -135,10 +184,9 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                                           checkGame = movePostCheck g o bp
                                                                               where b = getCurrentBoardFromGame g
                                                                                     c = getCurrentColourFromGame g
-                                                                                    parserOutput = (parseMove m)
-                                                                                    --newPosition = snd parserOutput
-                                                                                    --pieceMoved = fst parserOutput
-                                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp) b
+                                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
+                                                      Just Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                                                      runGame g
                                                       where b = getCurrentBoardFromGame g
                                                             c = getCurrentColourFromGame g
 
@@ -148,7 +196,7 @@ playerMoveAlt g isChecked  =  do putStrLn "Enter your move in standard notation"
                                  case m of
                                     "" -> do putStrLn "Please enter a valid move"
                                              runManualGame g
-                                    _  -> case (parseMove m) of
+                                    _  -> case (parseAlternate m) of
                                                       Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                     runManualGame g
                                                       Just KCastling -> if canCastleKingSide c b
@@ -161,7 +209,7 @@ playerMoveAlt g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                         else do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                                 runManualGame g
                                                                         where newGame = castleMove g QCastling
-                                                      Just (Normal (pt, bp)) -> case oldPosition of
+                                                      Just (Normal (pt, bp, oc)) -> case oldPosition of
                                                                               Nothing -> do putStrLn "Move unsuccessful. Please enter a valid move."
                                                                                             runManualGame g
                                                                               Just o ->  if isChecked && isCheck (getGameState newGame)
@@ -170,12 +218,59 @@ playerMoveAlt g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                                           else do putStrLn "Move succesful"
                                                                                                   runManualGame newGame
                                                                                     where newGame = move g o bp
-                                                                              where b = getCurrentBoardFromGame g
-                                                                                    c = getCurrentColourFromGame g
-                                                                                    parserOutput = (parseMove m)
-                                                                                    --newPosition = snd parserOutput
-                                                                                    --pieceMoved = fst parserOutput
-                                                                                    oldPosition = getCurrentPositionBasedOnMove c (pt, bp) b
+                                                                                where b = getCurrentBoardFromGame g
+                                                                                      c = getCurrentColourFromGame g
+                                                                                      oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
+                                                      Just Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                                                      runGame g
+
                                                       where b = getCurrentBoardFromGame g
                                                             c = getCurrentColourFromGame g                                                            
 
+playerAltMove :: Game -> [Move] -> IO()
+playerAltMove g (m:ms) = case m of
+                             KCastling -> if canCastleKingSide c b
+                                          then runLoop ms newGame
+                                          else do putStrLn "Invalid move1. Incorrect syntax"
+                                          where newGame = castleMove g KCastling
+                             QCastling -> if canCastleQueenSide c b
+                                          then runLoop ms newGame
+                                          else do putStrLn "Invalid move2. Incorrect syntax"
+                                          where newGame = castleMove g QCastling
+                             Normal (pt, bp, oc) -> case oldPosition of
+                                                         Nothing -> do putStrLn "Invalid move3. Incorrect syntax"
+                                                         Just o -> do putStrLn "Move succesful"
+                                                                      runLoop ms newGame
+                                                                   where newGame = move g o bp
+                                                    where b = getCurrentBoardFromGame g
+                                                          c = getCurrentColourFromGame g
+                                                          oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
+                             Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                        runLoop ms g
+                            where b = getCurrentBoardFromGame g
+                                  c = getCurrentColourFromGame g
+
+
+
+playerAltMoveLoaded :: Game -> [Move] -> IO()
+playerAltMoveLoaded g (m:ms) = case m of
+                                KCastling -> if canCastleKingSide c b
+                                                then runLoopForLoadedGame ms newGame
+                                                else do putStrLn "Invalid move1. Incorrect syntax"
+                                                where newGame = castleMove g KCastling
+                                QCastling -> if canCastleQueenSide c b
+                                                then runLoopForLoadedGame ms newGame
+                                                else do putStrLn "Invalid move2. Incorrect syntax"
+                                                where newGame = castleMove g QCastling
+                                Normal (pt, bp, oc) -> case oldPosition of
+                                                            Nothing -> do putStrLn "Invalid move3. Incorrect syntax"
+                                                            Just o -> do putStrLn "Move succesful"
+                                                                         runLoopForLoadedGame ms newGame
+                                                                      where newGame = move g o bp
+                                                        where b = getCurrentBoardFromGame g
+                                                              c = getCurrentColourFromGame g
+                                                              oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
+                                Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                           runLoopForLoadedGame ms g
+                                where b = getCurrentBoardFromGame g
+                                      c = getCurrentColourFromGame g
