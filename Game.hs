@@ -88,10 +88,14 @@ runGame g     = do putStrLn("Current board:")
 
 aiMove :: Game -> IO()
 aiMove g = do putStrLn "The engine has made its move"
+              displayMoveInNotation (diffStatesToGetMove current nextNew)
               {-runGame (aiMakeMove g (getRandomNextState g 1))-}
-              runGame (aiMakeMove g (retrieveNextState g))
+              runGame (aiMakeMove g next)
            where b = getCurrentBoardFromGame g
                  c = getCurrentColourFromGame g
+                 next = retrieveNextState g
+                 current = getGameState g
+                 nextNew = (c, getCurrentBoardFromGameState next)
 
 aiMoveAlt :: Game -> IO()
 aiMoveAlt g = do putStrLn "The engine has made its move"

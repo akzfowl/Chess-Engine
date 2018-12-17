@@ -8,7 +8,7 @@ instance Show PieceType where
     show Knight = "N"
     show Bishop = "B"
     show Queen = "Q"
-    show King = "K"
+    show King = "K" 
 
 pointValue :: PieceType -> Int
 pointValue pieceType = case pieceType of
