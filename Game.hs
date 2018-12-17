@@ -18,9 +18,10 @@ main = do putStrLn("Would you like to start a new game or load an old one? N = n
                       fileName <- getLine
                       --putStrLn "This functionality has not been implemented yet. Please check back at a later date"
                       --putStrLn "-----------------------------------------------------------------------------------"
-                      x <- doesFileExist fileName
+                      currentDirectory <- getCurrentDirectory
+                      x <- doesFileExist (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt")
                       if x == True
-                      then loadGameFromFile fileName
+                      then loadGameFromFile (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt")
                       else putStrLn "File does not exist at the given path"
                       main
             "N" -> do putStrLn("What would you like to play? 1 for Player vs Machine or 2 for Player vs Player (or 3 for machine vs machine!)")
@@ -105,7 +106,7 @@ runGame g     = do putStrLn("Current board:")
                    else playerMove g False
 
 aiMove :: Game -> IO()
-aiMove g = do putStrLn "The engine has made its move"
+aiMove g = do putStrLn "The engine is deep in thought at the moment......"
               displayMoveInNotation (diffStatesToGetMove current nextNew)
               {-runGame (aiMakeMove g (getRandomNextState g 1))-}
               runGame (aiMakeMove g (retrieveNextState g))
@@ -185,10 +186,17 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                               where b = getCurrentBoardFromGame g
                                                                                     c = getCurrentColourFromGame g
                                                                                     oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
-                                                      Just Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                                      Just Save -> do putStrLn "Enter file name"
+                                                                      fileName <- getLine
+                                                                      -- putStrLn $ show mh
+                                                                      currentDirectory <- getCurrentDirectory
+                                                                      --putStrLn currentDirectory
+                                                                      writeFile (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt") (unlines mh)
+                                                                      putStrLn "Successfully saved the game."
                                                                       runGame g
                                                       where b = getCurrentBoardFromGame g
                                                             c = getCurrentColourFromGame g
+                                                            mh = getMoveHistory g
 
 playerMoveAlt :: Game -> Bool -> IO()
 playerMoveAlt g isChecked  =  do putStrLn "Enter your move in standard notation"
@@ -252,6 +260,11 @@ playerAltMove g (m:ms) = case m of
 
 
 
+
+
+
+
+
 playerAltMoveLoaded :: Game -> [Move] -> IO()
 playerAltMoveLoaded g (m:ms) = case m of
                                 KCastling -> if canCastleKingSide c b
@@ -271,6 +284,7 @@ playerAltMoveLoaded g (m:ms) = case m of
                                                               c = getCurrentColourFromGame g
                                                               oldPosition = getCurrentPositionBasedOnMove c (pt, bp, oc) b
                                 Save -> do putStrLn "The save funtionality has not been added yet. Please enter a valid move instead"
+                                           writeFile "/Users/akshaykalbhor/Chess_Haskell/Chess-Engine/ChessGames/Game2.txt" "This is an important message!"
                                            runLoopForLoadedGame ms g
                                 where b = getCurrentBoardFromGame g
                                       c = getCurrentColourFromGame g

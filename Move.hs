@@ -8,7 +8,7 @@ data Move = Normal (PieceType, BoardPosition, Maybe Int) | KCastling | QCastling
 
 
 castleMove :: Game -> Move -> Game
-castleMove g m = (aiColour, (newColour, newBoard), hist ++ [currentState])
+castleMove g m = (aiColour, (newColour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                 where   aiColour = getAIColour g
                         currentState = getGameState g
                         hist = getGameHistory g
@@ -18,3 +18,7 @@ castleMove g m = (aiColour, (newColour, newBoard), hist ++ [currentState])
                                    then castleKingSide colour board
                                    else castleQueenSide colour board
                         newColour = opponent colour
+                        newState = (newColour, newBoard)
+                        pieceAndPos = diffStatesToGetMove currentState newState
+                        newMove = returnMoveInNotation pieceAndPos
+                        currentMoveHistory = getMoveHistory g

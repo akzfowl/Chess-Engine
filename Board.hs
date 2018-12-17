@@ -13,7 +13,8 @@ type HumanReadablePosition = (Char, Int)
 
 type GameState = (Colour, Board)
 type GameHistory = [GameState]
-type Game = (Colour, GameState, GameHistory)
+type MoveHistory = [String]
+type Game = (Colour, GameState, GameHistory, MoveHistory)
 
 
 displayBoard :: Board -> IO()
@@ -53,19 +54,23 @@ formattedDisplayBoard2 b = putStrLn (unlines ((border : boardStr) ++ [border, bo
 
 -- Functions to get specific portions of the Game and GameState
 getAIColour :: Game -> Colour
-getAIColour (c, _, _) = c
+getAIColour (c, _, _, _) = c
 
 getGameState :: Game -> GameState
-getGameState (_, gs, _) = gs
+getGameState (_, gs, _, _) = gs
 
 getGameHistory :: Game -> GameHistory
-getGameHistory (_, _, gh) = gh
+getGameHistory (_, _, gh, _) = gh
+
+getMoveHistory :: Game -> MoveHistory
+getMoveHistory (_,_,_,mh) = mh
 
 getCurrentColourFromGame :: Game -> Colour
-getCurrentColourFromGame (_, gs, _) = getCurrentColourFromGameState gs
+getCurrentColourFromGame (_, gs, _, _) = getCurrentColourFromGameState gs
 
 getCurrentBoardFromGame :: Game -> Board
-getCurrentBoardFromGame (_, gs, _) = getCurrentBoardFromGameState gs
+getCurrentBoardFromGame (_, gs, _, _) = getCurrentBoardFromGameState gs
+
 
 getCurrentColourFromGameState :: GameState -> Colour
 getCurrentColourFromGameState (c, _) = c
@@ -702,8 +707,8 @@ generateNextStates (colour, board) = [(opponent colour, board2) | positions <- p
 
 -- With all states (no stalemate)
 generateAllNextStates :: Game -> [GameState]
-generateAllNextStates (_, currentState, []) = generateNextStates currentState
-generateAllNextStates (_, currentState, history)
+generateAllNextStates (_, currentState, [], _) = generateNextStates currentState
+generateAllNextStates (_, currentState, history, _)
                 | null enPassantPossibility = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board]
                 | otherwise      = generateNextStates currentState ++ [(opponent currentTurn, board2) | board2 <- castling kingMoved kingSideRookMoved queenSideRookMoved currentTurn board] ++ [(opponent currentTurn, board2) | board2 <- enPassantMove currentState (head enPassantPossibility)]
                 where currentTurn = fst currentState
@@ -732,17 +737,21 @@ getCurrentPositionBasedOnMove c (p, (x, y), col) b = if null anyMoves
 
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
-aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState])
+aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                         where aiColour = getAIColour g
                               currentState = getGameState g
                               hist = getGameHistory g
                               colour = getCurrentColourFromGameState currentState
                               newBoard = getCurrentBoardFromGameState newGameState
                               newColour = opponent colour
+                              newState = (newColour, newBoard)
+                              pieceAndPos = diffStatesToGetMove currentState newState
+                              newMove = returnMoveInNotation pieceAndPos
+                              currentMoveHistory = getMoveHistory g
 
 -- Produce a move for the player
 move :: Game -> BoardPosition -> BoardPosition -> Game
-move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
+move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                  where aiColour = getAIColour g
                        currentState = getGameState g
                        hist = getGameHistory g
@@ -750,9 +759,13 @@ move g bp1 bp2 = (aiColour, (newColour, newBoard), hist ++ [currentState])
                        board = getCurrentBoardFromGameState currentState
                        newBoard = movePieceBetweenPositions bp1 bp2 board
                        newColour = opponent colour
+                       newState = (newColour, newBoard)
+                       pieceAndPos = diffStatesToGetMove currentState newState
+                       newMove = returnMoveInNotation pieceAndPos
+                       currentMoveHistory = getMoveHistory g
 
 movePostCheck :: Game -> BoardPosition -> BoardPosition -> Game
-movePostCheck g bp1 bp2 = (aiColour, (colour, newBoard), hist ++ [currentState])
+movePostCheck g bp1 bp2 = (aiColour, (colour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                         where aiColour = getAIColour g
                               currentState = getGameState g
                               hist = getGameHistory g
@@ -760,6 +773,10 @@ movePostCheck g bp1 bp2 = (aiColour, (colour, newBoard), hist ++ [currentState])
                               board = getCurrentBoardFromGameState currentState
                               newBoard = movePieceBetweenPositions bp1 bp2 board
                               newColour = opponent colour
+                              newState = (newColour, newBoard)
+                              pieceAndPos = diffStatesToGetMove currentState newState
+                              newMove = returnMoveInNotation pieceAndPos
+                              currentMoveHistory = getMoveHistory g
 
 -- Get a random move
 getRandomNextState :: Game -> Int -> GameState
@@ -803,13 +820,13 @@ sampleBoard2 = [[Just(Piece White Rook), Just(Piece White Knight), Just(Piece Wh
 
 -- Initialization of games
 initializeWhiteAIGame :: Game
-initializeWhiteAIGame = (White, initialGameState, [])
+initializeWhiteAIGame = (White, initialGameState, [], [])
 
 initializeBlackAIGame :: Game
-initializeBlackAIGame = (Black, initialGameState, [])
+initializeBlackAIGame = (Black, initialGameState, [], [])
 
 initializeAILessGame :: Game
-initializeAILessGame = (White, initialGameState, [])
+initializeAILessGame = (White, initialGameState, [], [])
 
 rookCount :: Colour -> Board -> Int
 rookCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositionOccupiedByPiece Rook x b)) [(u,v) | u <- [1..8], v <- [1..8]]
@@ -824,6 +841,10 @@ displayMoveInNotation (pt, bp) = if pt == Pawn
                                  then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
                                  else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
 
+returnMoveInNotation :: (PieceType, BoardPosition) -> String
+returnMoveInNotation (pt, bp) = if pt == Pawn
+                                 then boardToHumanReadable bp
+                                 else ((show pt) ++ (boardToHumanReadable bp))
 
 diffStatesToGetMove :: GameState -> GameState -> (PieceType, BoardPosition)
 diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
@@ -839,6 +860,6 @@ diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
                                                 c1 = getCurrentColourFromGameState gs1
                                                 c2 = getCurrentColourFromGameState gs2
                                                 p1 = positionsWithColour c1 b1
-                                                p2 = positionsWithColour c2 b2
+                                                p2 = positionsWithColour c1 b2
                                                 diffMove = (p2 \\ p1)
                                                 move = head diffMove

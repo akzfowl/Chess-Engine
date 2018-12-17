@@ -20,6 +20,7 @@ capitalLetterToPieceType p = case p of
                                  'B' -> Bishop
                                  'N' -> Knight
                                  'R' -> Rook
+
 -- A function which converts a small letter to a number on the board
 smallLetterToInt :: Char -> Int
 smallLetterToInt p = case p of

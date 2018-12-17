@@ -11,11 +11,11 @@ maxDepth :: Int
 maxDepth = 2
 
 generateTree :: Int -> Game -> GameTree
-generateTree 0 (_, gs, _)         = GameTree gs []
-generateTree curDepth (c, gs, gh)
+generateTree 0 (_, gs, _, _)         = GameTree gs []
+generateTree curDepth (c, gs, gh, mh)
         | endState gs = GameTree gs []
         | otherwise   = GameTree gs (map (generateTree (curDepth-1)) nextStates)
-        where nextStates = map (\y -> (c, y, gs:gh)) (generateAllNextStates (c, gs, gh))
+        where nextStates = map (\y -> (c, y, gs:gh, mh)) (generateAllNextStates (c, gs, gh, mh))
 
 minmaxAlg :: GameTree -> Int
 minmaxAlg (GameTree t [])          = evaluateState t
