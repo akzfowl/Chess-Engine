@@ -77,14 +77,14 @@ getCurrentBoardFromGameState (_, b) = b
 -- Position convertors (currently not used)
 boardToHumanReadable :: BoardPosition -> String
 boardToHumanReadable (p1, p2) = case p2 of
-                                    1 -> 'a' : (show p1)
-                                    2 -> 'b' : (show p1)
-                                    3 -> 'c' : (show p1)
-                                    4 -> 'd' : (show p1)
-                                    5 -> 'e' : (show p1)
-                                    6 -> 'f' : (show p1)
-                                    7 -> 'g' : (show p1)
-                                    8 -> 'h' : (show p1)
+                                          1 -> 'a' : (show p1)
+                                          2 -> 'b' : (show p1)
+                                          3 -> 'c' : (show p1)
+                                          4 -> 'd' : (show p1)
+                                          5 -> 'e' : (show p1)
+                                          6 -> 'f' : (show p1)
+                                          7 -> 'g' : (show p1)
+                                          8 -> 'h' : (show p1)
 
 humanReadableToBoard :: HumanReadablePosition -> BoardPosition
 humanReadableToBoard (p1, p2) = case p1 of
@@ -603,7 +603,7 @@ canBeIntercepted c bp b = if snd attackInfo == Knight
                                 kingPosition = getPositionOfColouredKing c b
                                 attackerPosition = fst attackInfo
                                 allInterimPositions =  getAllPositionsBetweenPositions kingPosition attackerPosition
-                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) (removeFromBoardAtPosition (attackerPosition) b)
+                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) b{-(removeFromBoardAtPosition (attackerPosition) b)-}
                                 ownPiecePositions p = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
                                 ownPieceMoves = concat (concat (generateBoardMovesForColour b c))
                                 blockerMoves = intersect allInterimPositions ownPieceMoves
@@ -745,29 +745,6 @@ getCurrentPositionBasedOnMove c (p, (x, y), col) b = if null anyMoves
                                                             anyMoves = filter (\a -> (x,y) `elem` (getMovementsForPiece p a b)) ownPiecePositions
                                                             ownPiecePositions = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
 
-displayMoveInNotation :: (PieceType, BoardPosition) -> IO()
-displayMoveInNotation (pt, bp) =  if pt == Pawn
-                                  then putStrLn("The engine's move: " ++ (boardToHumanReadable bp))
-                                  else putStrLn("The engine's move: " ++ (show pt) ++ (boardToHumanReadable bp))
-
-diffStatesToGetMove :: GameState -> GameState -> (PieceType, BoardPosition)
-diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
-                              Nothing -> (Pawn, (0,0))
-                              Just Pawn -> (Pawn, move)
-                              Just Rook -> (Rook, move)
-                              Just Knight -> (Knight, move)
-                              Just Bishop -> (Bishop, move)
-                              Just Queen -> (Queen, move)
-                              Just King -> (King, move)
-                              where b1 = getCurrentBoardFromGameState gs1
-                                    b2 = getCurrentBoardFromGameState gs2
-                                    c1 = getCurrentColourFromGameState gs1
-                                    c2 = getCurrentColourFromGameState gs2
-                                    p1 = positionsWithColour c1 b1
-                                    p2 = positionsWithColour c2 b2
-                                    diffMove = (p2 \\ p1)
-                                    move = head diffMove
-
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
 aiMakeMove g newGameState =(aiColour, (newColour, newBoard), hist ++ [currentState])
@@ -861,10 +838,14 @@ bishopCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositi
 
 
 displayMoveInNotation :: (PieceType, BoardPosition) -> IO()
-displayMoveInNotation (pt, bp) = if pt == Pawn
-                                 then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
-                                 else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
+displayMoveInNotation (pt, bp)   = if pt == Pawn
+                                   then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
+                                   else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
 
+returnMoveInNotation :: (PieceType, BoardPosition) -> String
+returnMoveInNotation (pt, bp) = if pt == Pawn
+                                then ("The engine moved " ++ (boardToHumanReadable bp))
+                                else ("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
 
 diffStatesToGetMove :: GameState -> GameState -> (PieceType, BoardPosition)
 diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
@@ -880,6 +861,6 @@ diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
                                                 c1 = getCurrentColourFromGameState gs1
                                                 c2 = getCurrentColourFromGameState gs2
                                                 p1 = positionsWithColour c1 b1
-                                                p2 = positionsWithColour c2 b2
+                                                p2 = positionsWithColour c1 b2
                                                 diffMove = (p2 \\ p1)
                                                 move = head diffMove
