@@ -109,7 +109,7 @@ aiMove :: Game -> IO()
 aiMove g = do putStrLn "The engine is deep in thought at the moment......"
               displayMoveInNotation (diffStatesToGetMove current nextNew)
               {-runGame (aiMakeMove g (getRandomNextState g 1))-}
-              runGame (aiMakeMove g (retrieveNextState g))
+              runGame (aiMakeMove g next)
            where b = getCurrentBoardFromGame g
                  c = getCurrentColourFromGame g
                  next = retrieveNextState g

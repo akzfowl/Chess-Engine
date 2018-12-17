@@ -4,6 +4,7 @@ import Board
 import Piece
 import Colour
 import PieceType
+import Data.List
 
 data GameTree = GameTree {state::GameState, children::[GameTree]}
 

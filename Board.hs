@@ -82,14 +82,14 @@ getCurrentBoardFromGameState (_, b) = b
 -- Position convertors (currently not used)
 boardToHumanReadable :: BoardPosition -> String
 boardToHumanReadable (p1, p2) = case p2 of
-                                    1 -> 'a' : (show p1)
-                                    2 -> 'b' : (show p1)
-                                    3 -> 'c' : (show p1)
-                                    4 -> 'd' : (show p1)
-                                    5 -> 'e' : (show p1)
-                                    6 -> 'f' : (show p1)
-                                    7 -> 'g' : (show p1)
-                                    8 -> 'h' : (show p1)
+                                          1 -> 'a' : (show p1)
+                                          2 -> 'b' : (show p1)
+                                          3 -> 'c' : (show p1)
+                                          4 -> 'd' : (show p1)
+                                          5 -> 'e' : (show p1)
+                                          6 -> 'f' : (show p1)
+                                          7 -> 'g' : (show p1)
+                                          8 -> 'h' : (show p1)
 
 humanReadableToBoard :: HumanReadablePosition -> BoardPosition
 humanReadableToBoard (p1, p2) = case p1 of
@@ -203,6 +203,16 @@ kingCanCaptureWithThreatBoard = [[Just(Piece White Rook), Just(Piece White Knigh
                   [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn)],
                   [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Just(Piece Black Queen), Just(Piece Black King), Just(Piece Black Bishop), Nothing, Just(Piece Black Rook)]]
 
+kingCheckMateBoard :: Board
+kingCheckMateBoard = [[Just(Piece White Rook), Nothing, Just(Piece White Bishop), Nothing, Nothing, Just(Piece White Rook), Just(Piece White King), Nothing],
+                  [Just(Piece White Pawn), Just(Piece White Pawn), Just(Piece White Pawn), Nothing, Nothing, Just(Piece White Pawn), Nothing, Just(Piece White Pawn)],
+                  [Nothing, Nothing, Nothing, Just(Piece White Pawn), Nothing, Nothing , Nothing, Nothing],
+                  [Nothing, Nothing, Just(Piece White Bishop), Nothing, Nothing, Nothing, Nothing , Nothing],
+                  [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Just(Piece White Queen) , Nothing],
+                  [Nothing, Nothing, Nothing, Just (Piece Black Pawn), Nothing, Just(Piece Black King), Nothing , Nothing],
+                  [Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Just(Piece Black Pawn), Nothing, Nothing, Just(Piece Black Pawn), Just(Piece Black Rook)],
+                  [Just(Piece Black Rook), Just(Piece Black Knight), Just(Piece Black Bishop), Nothing, Just(Piece Black Queen), Just(Piece Black Bishop), Nothing, Nothing]]
+                  
 -- Empty board in case needed
 emptyBoard :: Board
 emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
@@ -492,7 +502,12 @@ queenMovements :: BoardPosition -> Board -> [BoardPosition]
 queenMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1, p2) x b) [(p1 + fst s, p2 + snd s) | s <- (straightMovements ++ diagonalMovements)]
 
 kingMovements :: BoardPosition -> Board -> [BoardPosition]
-kingMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1, p2) x b) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
+{-kingMovements (p1, p2) b = filter (\x -> isPositionOnBoard x && isPathClear (p1, p2) x b) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]-}
+kingMovements (p1, p2) b = if (getColourOfPieceInPosition (p1, p2) b) == (Just White)
+                           then filter (\x -> isPositionOnBoard x && ((isPositionEmpty x b && not (isPieceUnderAttack Black x (moveUnsafe (p1, p2) x b))) || (hasOppositePlayerPiece (p1,p2) x b && not (isPieceUnderAttack Black x (moveUnsafe (p1, p2) x b))))) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
+                           else filter (\x -> isPositionOnBoard x && ((isPositionEmpty x b && not (isPieceUnderAttack White x (moveUnsafe (p1, p2) x b))) || (hasOppositePlayerPiece (p1,p2) x b && not (isPieceUnderAttack White x (moveUnsafe (p1, p2) x b))))) [(p1 + fst s, p2 + snd s) | s <- (singleStraightMovements ++ singleDiagonalMovements)]
+{-((getColourOfPieceInPosition p1 b) == Just White) && not (isPieceUnderAttack Black p2 interimBoard)
+interimBoard = moveUnsafe p1 p2 b-}
 
 -- Validator
 isValidPosition :: BoardPosition -> Bool
@@ -593,7 +608,7 @@ canBeIntercepted c bp b = if snd attackInfo == Knight
                                 kingPosition = getPositionOfColouredKing c b
                                 attackerPosition = fst attackInfo
                                 allInterimPositions =  getAllPositionsBetweenPositions kingPosition attackerPosition
-                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) (removeFromBoardAtPosition (attackerPosition) b)
+                                canTakeAttackingPiece = isPieceUnderAttack c (fst attackInfo) b{-(removeFromBoardAtPosition (attackerPosition) b)-}
                                 ownPiecePositions p = filter (\a -> not (isPositionEmpty a b) && isOccupiedByColour c a b && isPositionOccupiedByPiece p a b) [(u,v) | u <- [1..8], v <- [1..8]]
                                 ownPieceMoves = concat (concat (generateBoardMovesForColour b c))
                                 blockerMoves = intersect allInterimPositions ownPieceMoves
@@ -737,6 +752,7 @@ getCurrentPositionBasedOnMove c (p, (x, y), col) b = if null anyMoves
 
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
+<<<<<<< HEAD
 aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                         where aiColour = getAIColour g
                               currentState = getGameState g
@@ -748,6 +764,18 @@ aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentSt
                               pieceAndPos = diffStatesToGetMove currentState newState
                               newMove = returnMoveInNotation pieceAndPos
                               currentMoveHistory = getMoveHistory g
+=======
+aiMakeMove g newGameState =(aiColour, (newColour, newBoard), hist ++ [currentState])
+                            where aiColour = getAIColour g
+                                  currentState = getGameState g
+                                  hist = getGameHistory g
+                                  colour = getCurrentColourFromGameState currentState
+                                  newBoard = getCurrentBoardFromGameState newGameState
+                                  newColour = opponent colour
+                                  move = diffStatesToGetMove currentState newGameState
+                                  pt = fst move
+                                  bp = snd move
+>>>>>>> cfd64186a48fe8cf96883763f4bd717cd0496b4d
 
 -- Produce a move for the player
 move :: Game -> BoardPosition -> BoardPosition -> Game
@@ -837,14 +865,15 @@ bishopCount c b = length $ filter (\x -> (isOccupiedByColour c x b) && (isPositi
 
 
 displayMoveInNotation :: (PieceType, BoardPosition) -> IO()
-displayMoveInNotation (pt, bp) = if pt == Pawn
-                                 then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
-                                 else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
+displayMoveInNotation (pt, bp)   = if pt == Pawn
+                                   then putStrLn("The engine moved " ++ (boardToHumanReadable bp))
+                                   else putStrLn("The engine moved " ++ (show pt) ++ (boardToHumanReadable bp))
 
 returnMoveInNotation :: (PieceType, BoardPosition) -> String
 returnMoveInNotation (pt, bp) = if pt == Pawn
                                  then boardToHumanReadable bp
                                  else ((show pt) ++ (boardToHumanReadable bp))
+
 
 diffStatesToGetMove :: GameState -> GameState -> (PieceType, BoardPosition)
 diffStatesToGetMove gs1 gs2 = case (getPieceTypeInPosition move b2) of
