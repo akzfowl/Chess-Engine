@@ -19,9 +19,9 @@ main = do putStrLn("Would you like to start a new game or load an old one? N = n
                       --putStrLn "This functionality has not been implemented yet. Please check back at a later date"
                       --putStrLn "-----------------------------------------------------------------------------------"
                       currentDirectory <- getCurrentDirectory
-                      x <- doesFileExist (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt")
+                      x <- doesFileExist (currentDirectory ++ "/SavedGames/" ++ fileName ++ ".txt")
                       if x == True
-                      then loadGameFromFile (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt")
+                      then loadGameFromFile (currentDirectory ++ "/SavedGames/" ++ fileName ++ ".txt")
                       else putStrLn "File does not exist at the given path"
                       main
             "N" -> do putStrLn("What would you like to play? 1 for Player vs Machine or 2 for Player vs Player (or 3 for machine vs machine!)")
@@ -117,7 +117,8 @@ aiMove g = do putStrLn "The engine is deep in thought at the moment......"
                  nextNew = (c, getCurrentBoardFromGameState next)
 
 runGameFromFile :: String -> IO()
-runGameFromFile f = do l <- parseFile f
+runGameFromFile f = do currentDirectory <- getCurrentDirectory
+                       l <- parseFile (currentDirectory ++ "/ChessGames/" ++ f ++ ".txt")
                        case sequence l of
                             Just l' -> runLoop l' initializeBlackAIGame
                             Nothing -> putStrLn "Invalid syntax found in the current file."
@@ -130,6 +131,10 @@ loadGameFromFile f = do l <- parseFile f
                                        then runLoopForLoadedGame l' initializeBlackAIGame
                                        else runLoopForLoadedGame l' initializeWhiteAIGame
                             Nothing -> putStrLn "Invalid syntax found in the current file."
+
+
+
+
 
 runLoop :: [Move] -> Game -> IO()
 runLoop [] g = do formattedDisplayBoard1 (getCurrentBoardFromGame g)
@@ -191,7 +196,7 @@ playerMove g isChecked  =  do putStrLn "Enter your move in standard notation"
                                                                       -- putStrLn $ show mh
                                                                       currentDirectory <- getCurrentDirectory
                                                                       --putStrLn currentDirectory
-                                                                      writeFile (currentDirectory ++ "/ChessGames/" ++ fileName ++ ".txt") (unlines mh)
+                                                                      writeFile (currentDirectory ++ "/SavedGames/" ++ fileName ++ ".txt") (unlines mh)
                                                                       putStrLn "Successfully saved the game."
                                                                       runGame g
                                                       where b = getCurrentBoardFromGame g

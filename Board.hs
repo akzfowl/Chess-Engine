@@ -752,7 +752,6 @@ getCurrentPositionBasedOnMove c (p, (x, y), col) b = if null anyMoves
 
 -- Produce a move for the AI
 aiMakeMove :: Game -> GameState -> Game
-<<<<<<< HEAD
 aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentState], currentMoveHistory ++ [newMove])
                         where aiColour = getAIColour g
                               currentState = getGameState g
@@ -764,18 +763,6 @@ aiMakeMove g newGameState = (aiColour, (newColour, newBoard), hist ++ [currentSt
                               pieceAndPos = diffStatesToGetMove currentState newState
                               newMove = returnMoveInNotation pieceAndPos
                               currentMoveHistory = getMoveHistory g
-=======
-aiMakeMove g newGameState =(aiColour, (newColour, newBoard), hist ++ [currentState])
-                            where aiColour = getAIColour g
-                                  currentState = getGameState g
-                                  hist = getGameHistory g
-                                  colour = getCurrentColourFromGameState currentState
-                                  newBoard = getCurrentBoardFromGameState newGameState
-                                  newColour = opponent colour
-                                  move = diffStatesToGetMove currentState newGameState
-                                  pt = fst move
-                                  bp = snd move
->>>>>>> cfd64186a48fe8cf96883763f4bd717cd0496b4d
 
 -- Produce a move for the player
 move :: Game -> BoardPosition -> BoardPosition -> Game
